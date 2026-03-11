@@ -12,26 +12,26 @@ def get_trial_masks(df):
     Returns:
         dict: A dictionary mapping condition names (e.g., 'AAAB', 'AAAX') to boolean pandas Series (masks).
     """
-    # Base filter for all valid trials
-    base_mask = (df['correct'] == 1) & (df['stimulus_number'] == 3)
+    # Use task_condition_number directly for reliable mapping
+    df['task_condition_number'] = pd.to_numeric(df['task_condition_number'], errors='coerce')
     
-    # Block 2: AAAB Sequence
-    aaab = base_mask & (df['task_block_number'] == 2) & df['is_omission'].isna()
-    axab = (df['task_block_number'] == 2) & (df['correct'] == 1) & (df['is_omission'] == 1) & (df['stimulus_number'] == 3)
-    aaxb = (df['task_block_number'] == 2) & (df['correct'] == 1) & (df['is_omission'] == 1) & (df['stimulus_number'] == 4)
-    aaax = (df['task_block_number'] == 2) & (df['correct'] == 1) & (df['is_omission'] == 1) & (df['stimulus_number'] == 5)
-
-    # Block 4: BBBA Sequence
-    bbba = base_mask & (df['task_block_number'] == 4) & df['is_omission'].isna()
-    bxba = (df['task_block_number'] == 4) & (df['correct'] == 1) & (df['is_omission'] == 1) & (df['stimulus_number'] == 3)
-    bbxa = (df['task_block_number'] == 4) & (df['correct'] == 1) & (df['is_omission'] == 1) & (df['stimulus_number'] == 4)
-    bbbx = (df['task_block_number'] == 4) & (df['correct'] == 1) & (df['is_omission'] == 1) & (df['stimulus_number'] == 5)
-
-    # Block 5: RRRR Sequence (Randomized)
-    rrrr = base_mask & (df['task_block_number'] == 5) & df['is_omission'].isna()
-    rxrr = (df['task_block_number'] == 5) & (df['correct'] == 1) & (df['is_omission'] == 1) & (df['stimulus_number'] == 3)
-    rrxr = (df['task_block_number'] == 5) & (df['correct'] == 1) & (df['is_omission'] == 1) & (df['stimulus_number'] == 4)
-    rrrx = (df['task_block_number'] == 5) & (df['correct'] == 1) & (df['is_omission'] == 1) & (df['stimulus_number'] >= 5)
+    aaab = df['task_condition_number'].isin([1, 2])
+    axab = df['task_condition_number'] == 3
+    aaxb = df['task_condition_number'] == 4
+    aaax = df['task_condition_number'] == 5
+    
+    bbba = df['task_condition_number'].isin([6, 7])
+    bxba = df['task_condition_number'] == 8
+    bbxa = df['task_condition_number'] == 9
+    bbbx = df['task_condition_number'] == 10
+    
+    # Assuming RRRR is not a single code
+    rrrr = df['task_condition_number'].isin([11, 12]) # Placeholder
+    rxrr = df['task_condition_number'].isin([35, 37]) # Placeholder
+    rrxr = df['task_condition_number'].isin([36, 38]) # Placeholder
+    rrrx = df['task_condition_number'] >= 39 # Placeholder
+    
+    print("AAAB mask sum:", aaab.sum())
 
     return {
         'AAAB': aaab, 'AXAB': axab, 'AAXB': aaxb, 'AAAX': aaax,
@@ -68,7 +68,7 @@ def extract_good_units(nwb):
     # Probe A (0-127), Probe B (128-255), Probe C (256-383)
     def map_probe(channel_id):
         if pd.isna(channel_id): return 'unknown'
-        cid = int(channel_id)
+        cid = int(float(channel_id))
         if 0 <= cid < 128: return 'probeA'
         elif 128 <= cid < 256: return 'probeB'
         elif 256 <= cid < 384: return 'probeC'

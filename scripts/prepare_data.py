@@ -28,8 +28,8 @@ def extract_timeseries_chunk(timeseries, start_time, duration):
     except: return None
 
 def main(session_id, nwb_path):
-    output_h5 = f'D:/hnxj-gemini/ses-{session_id}_data_chunks.h5'
-    trials_path = f'D:/hnxj-gemini/ses-{session_id}_trials.csv'
+    output_h5 = f'D:/OmissionAnalysis/ses-{session_id}_data_chunks.h5'
+    trials_path = f'D:/OmissionAnalysis/ses-{session_id}_trials.csv'
     
     if os.path.exists(output_h5):
         print(f"Chunks for {session_id} already exist. Skipping.")
