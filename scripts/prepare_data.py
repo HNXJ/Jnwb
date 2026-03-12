@@ -46,7 +46,6 @@ def main(session_id, nwb_path):
             eye = nwb.acquisition['eye_1_tracking']
             pupil = nwb.acquisition['pupil_1_tracking']
             photo = nwb.acquisition['photodiode_1_tracking']
-            lfp_pfc = nwb.acquisition['probe_2_lfp']
             
             for i, (_, row) in enumerate(trials.iterrows()):
                 trial_id = int(row['trial_num'])
@@ -54,10 +53,15 @@ def main(session_id, nwb_path):
                 t_start = row['start_time'] - PRE_T
                 
                 grp = h5.create_group(f"mode_{mode_id}/trial_{trial_id}")
-                grp.create_dataset('eye', data=extract_timeseries_chunk(eye, t_start, TOTAL_T), compression='gzip')
-                grp.create_dataset('pupil', data=extract_timeseries_chunk(pupil, t_start, TOTAL_T), compression='gzip')
-                grp.create_dataset('photodiode', data=extract_timeseries_chunk(photo, t_start, TOTAL_T), compression='gzip')
-                grp.create_dataset('lfp', data=extract_timeseries_chunk(lfp_pfc, t_start, TOTAL_T), compression='gzip')
+                
+                # Extract Continuous Signals
+                eye_data = extract_timeseries_chunk(eye, t_start, TOTAL_T)
+                pupil_data = extract_timeseries_chunk(pupil, t_start, TOTAL_T)
+                photo_data = extract_timeseries_chunk(photo, t_start, TOTAL_T)
+                
+                if eye_data is not None: grp.create_dataset('eye', data=eye_data, compression='gzip')
+                if pupil_data is not None: grp.create_dataset('pupil', data=pupil_data, compression='gzip')
+                if photo_data is not None: grp.create_dataset('photodiode', data=photo_data, compression='gzip')
                 
                 spike_grp = grp.create_group('spikes')
                 for u_idx in range(len(nwb.units)):

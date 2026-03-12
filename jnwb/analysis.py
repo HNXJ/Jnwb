@@ -1,152 +1,95 @@
 """
-analysis.py: Modular Python implementations of core neural analysis functions.
-Optimized for the jnwb package ecosystem.
+analysis.py: Expanded neural analysis with multi-band spectral support.
 """
-
 import numpy as np
-from scipy.signal import csd, welch
-from typing import Tuple, Optional
+from scipy.signal import welch, coherence, spectrogram
+from scipy.stats import pearsonr
+import mne
 
-def compute_spike_field_coherence(
-    lfp: np.ndarray, 
-    spk: np.ndarray, 
-    fs: float, 
-    f_range: Tuple[float, float],
-    n_freqs: int = 100
-) -> Tuple[np.ndarray, np.ndarray]:
+# --- Spectral Band Definitions ---
+BANDS = {
+    'theta': (3, 6),
+    'alpha': (8, 12),
+    'low-beta': (13, 20),
+    'high-beta': (21, 30),
+    'gamma': (35, 70),
+    'high-gamma': (75, 150)
+}
+
+def get_band_power(data, fs, band_name):
+    """Calculates mean power in a specific frequency band."""
+    f_min, f_max = BANDS[band_name]
+    f, Pxx = welch(data, fs=fs, nperseg=512)
+    mask = (f >= f_min) & (f <= f_max)
+    # Ignore NaNs during mean calculation
+    return np.nanmean(Pxx[mask])
+
+def compute_cross_band_correlation(sig1, sig2, fs):
     """
-    Calculate Spike-Field Coherence (SFC) for multiple neuron-channel pairs.
-    lfp: (n_trials, n_channels, n_time)
-    spk: (n_trials, n_neurons, n_time)
-    Returns: (coherence, freqs)
+    Calculates power correlation between all bands of two signals.
     """
-    n_trials, n_channels, n_time = lfp.shape
-    trials2, n_neurons, time2 = spk.shape
+    results = {}
+    for b1 in BANDS:
+        for b2 in BANDS:
+            # Note: This is a static correlation. 
+            # For time-resolved, we would use the TFR below.
+            p1 = get_band_power(sig1, fs, b1)
+            p2 = get_band_power(sig2, fs, b2)
+            results[f"{b1}_{b2}"] = (p1, p2)
+    return results
 
-    if n_trials != trials2 or n_time != time2:
-        raise ValueError("Dimensions of LFP and SPK must match.")
-
-    f_min, f_max = f_range
-    # Use CSD to calculate coherence
-    # We'll calculate mean across trials for better estimation
-    
-    # Calculate cross-spectral density and power spectral densities
-    # We'll pick a window size for welch (e.g., 512 samples)
-    nperseg = min(n_time, 512)
-    
-    # Pre-allocate output [Neurons x Channels x Frequency]
-    # We first find the frequency vector length
-    _, temp_f = welch(lfp[0, 0, :], fs=fs, nperseg=nperseg)
-    freq_mask = (temp_f >= f_min) & (temp_f <= f_max)
-    actual_freqs = temp_f[freq_mask]
-    
-    coherence_matrix = np.zeros((n_neurons, n_channels, len(actual_freqs)))
-
-    for n_idx in range(n_neurons):
-        for c_idx in range(n_channels):
-            # Calculate mean CSD and PSD across trials
-            s_xy_total = 0
-            s_xx_total = 0
-            s_yy_total = 0
-            
-            for t_idx in range(n_trials):
-                f, s_xy = csd(lfp[t_idx, c_idx, :], spk[t_idx, n_idx, :], fs=fs, nperseg=nperseg)
-                _, s_xx = welch(lfp[t_idx, c_idx, :], fs=fs, nperseg=nperseg)
-                _, s_yy = welch(spk[t_idx, n_idx, :], fs=fs, nperseg=nperseg)
-                
-                s_xy_total += s_xy[freq_mask]
-                s_xx_total += s_xx[freq_mask]
-                s_yy_total += s_yy[freq_mask]
-            
-            # Coherence = |mean(Sxy)|^2 / (mean(Sxx) * mean(Syy))
-            coherence = (np.abs(s_xy_total/n_trials)**2) / ((s_xx_total/n_trials) * (s_yy_total/n_trials) + 1e-10)
-            coherence_matrix[n_idx, c_idx, :] = coherence
-
-    return coherence_matrix, actual_freqs
-
-def compute_percent_explained_variance(
-    data: np.ndarray, 
-    group_labels: np.ndarray, 
-    use_omega_squared: bool = True
-) -> dict:
+def compute_tfr_features(sig, fs):
     """
-    Calculates PEV (Eta-squared or Omega-squared) for neural data.
-    data: (n_observations, n_variables)
-    group_labels: (n_observations,)
+    Computes Time-Frequency Representation for band mapping.
     """
-    n_total = len(group_labels)
-    unique_groups = np.unique(group_labels)
-    n_groups = len(unique_groups)
-    
-    if n_groups < 2:
-        return {"error": "At least 2 groups required for ANOVA/PEV"}
+    freqs = np.linspace(3, 150, 50)
+    n_cycles = freqs / 2.
+    # mne expects [epochs, channels, times]
+    data = sig[np.newaxis, np.newaxis, :]
+    power = mne.time_frequency.tfr_array_morlet(
+        data, sfreq=fs, freqs=freqs, n_cycles=n_cycles, 
+        output='power', n_jobs=1, verbose=False
+    )
+    return freqs, power[0, 0, :, :] # (n_freqs, n_time)
 
-    # Grand mean
-    grand_mean = np.mean(data, axis=0)
-    
-    # Sum of Squares Total (SStotal)
-    ss_total = np.sum((data - grand_mean)**2, axis=0)
-    
-    # Sum of Squares Groups (SSgrps)
-    ss_grps = np.zeros(data.shape[1])
-    for g in unique_groups:
-        group_data = data[group_labels == g]
-        n_g = len(group_data)
-        group_mean = np.mean(group_data, axis=0)
-        ss_grps += n_g * (group_mean - grand_mean)**2
+def compute_trial_tfr_dynamics(data_3d, fs, band_name):
+    """
+    Computes power dynamics for each trial in a specific band.
+    data_3d: (trials, time) or (trials, channels, time)
+    Returns: mean_power, sem_power (over trials)
+    """
+    if data_3d.ndim == 3: # (trials, chans, time)
+        data_3d = np.mean(data_3d, axis=1) # Mean over channels
         
-    if use_omega_squared:
-        # Omega-squared = (SSgrps - (df_grps * MSerr)) / (SStotal + MSerr)
-        df_grps = n_groups - 1
-        df_err = n_total - n_groups
-        ms_err = (ss_total - ss_grps) / df_err
-        
-        pev = (ss_grps - (df_grps * ms_err)) / (ss_total + ms_err + 1e-10)
-    else:
-        # Eta-squared = SSgrps / SStotal
-        pev = ss_grps / (ss_total + 1e-10)
-        
-    return {"pev": pev, "groups": unique_groups, "n_total": n_total}
-
-def classify_omission_predictability(
-    features: np.ndarray, 
-    labels: np.ndarray, 
-    cv_folds: int = 5
-) -> dict:
-    """
-    Trains a Random Forest classifier to distinguish between Predictable (AAAx) 
-    and Random (RXRR/AXAB) omissions based on neural features (e.g., spectral power, firing rate).
+    n_trials, n_time = data_3d.shape
+    f_min, f_max = BANDS[band_name]
     
-    Args:
-        features: (n_trials, n_features) array of neural data during the omission window.
-        labels: (n_trials,) array of binary labels (1 = Predictable, 0 = Random).
-        cv_folds: Number of cross-validation folds.
-        
-    Returns:
-        dict: Classification metrics including mean accuracy, std, and feature importances.
+    # Use Morlet for trial-level precision
+    freqs = np.linspace(f_min, f_max, 5)
+    n_cycles = freqs / 2.
+    
+    # mne expects [epochs, channels, times]
+    mne_data = data_3d[:, np.newaxis, :]
+    power = mne.time_frequency.tfr_array_morlet(
+        mne_data, sfreq=fs, freqs=freqs, n_cycles=n_cycles,
+        output='power', n_jobs=1, verbose=False
+    ) # (trials, 1, freqs, time)
+    
+    # Average across frequencies in the band
+    band_power_trials = np.nanmean(power[:, 0, :, :], axis=1) # (trials, time)
+    
+    mean_dyn = np.nanmean(band_power_trials, axis=0)
+    sem_dyn = np.nanstd(band_power_trials, axis=0) / np.sqrt(n_trials)
+    
+    return mean_dyn, sem_dyn
+
+def compute_variability_quenching(data_3d):
     """
-    try:
-        from sklearn.ensemble import RandomForestClassifier
-        from sklearn.model_selection import cross_val_score
-        import warnings
-        
-        # Suppress future warnings from sklearn
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            
-            clf = RandomForestClassifier(n_estimators=100, random_state=42, class_weight='balanced')
-            scores = cross_val_score(clf, features, labels, cv=cv_folds, scoring='accuracy')
-            
-            # Fit on all data to get feature importances
-            clf.fit(features, labels)
-            importances = clf.feature_importances_
-            
-            return {
-                "mean_accuracy": float(np.mean(scores)),
-                "std_accuracy": float(np.std(scores)),
-                "feature_importances": importances.tolist(),
-                "n_predictable": int(np.sum(labels == 1)),
-                "n_random": int(np.sum(labels == 0))
-            }
-    except ImportError:
-        return {"error": "scikit-learn is not installed. Run: pip install scikit-learn"}
+    Calculates trial-to-trial variance over time.
+    """
+    if data_3d.ndim == 3:
+        data_3d = np.mean(data_3d, axis=1)
+    
+    # Variance across trials at each time point
+    return np.nanvar(data_3d, axis=0)
+

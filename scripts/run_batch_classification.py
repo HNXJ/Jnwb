@@ -1,6 +1,3 @@
-"""
-Batch classification of Predictable vs Random omissions across all sessions and brain areas.
-"""
 import sys
 import os
 import h5py
@@ -8,97 +5,108 @@ import numpy as np
 import pandas as pd
 from scipy.signal import welch
 import json
+from pynwb import NWBHDF5IO
 
 # Add jnwb to path
 sys.path.append(r'D:\jnwb')
 from jnwb.analysis import classify_omission_predictability
+from jnwb.oglo import extract_good_units
 
 DATA_DIR = r'D:\OmissionAnalysis'
-STATS_PATH = os.path.join(DATA_DIR, 'all_units_stats.json')
+NWB_ROOT = os.path.join(DATA_DIR, 'reconstructed_nwbdata')
 
-def get_power_features(spikes, fs, f_band=(38, 40)):
-    """Calculates band power for each unit and trial."""
-    n_trials, n_units, n_time = spikes.shape
-    features = np.zeros((n_trials, n_units))
-    
-    for i in range(n_trials):
-        for j in range(n_units):
-            f, Pxx = welch(spikes[i, j, :], fs=fs, nperseg=256)
-            band_mask = (f >= f_band[0]) & (f <= f_band[1])
-            features[i, j] = np.mean(Pxx[band_mask])
-            
-    return features
+def get_session_mapping(nwb_path):
+    """Temporary helper to get mapping for classification script."""
+    with NWBHDF5IO(nwb_path, 'r', load_namespaces=True) as io:
+        nwb = io.read()
+        df_elec = nwb.electrodes.to_dataframe()
+        probe_col = 'group_name' if 'group_name' in df_elec.columns else 'probe'
+        mapping = {}
+        for probe, group in df_elec.groupby(probe_col):
+            areas = [a for a in group['location'].unique().tolist() if a.lower() not in ['unknown', '']]
+            mapping[probe] = areas
+        return mapping
 
-def run_batch_classification():
-    # Load session metadata
-    with open(STATS_PATH, 'r') as f:
-        meta = json.load(f)
-    
-    results = []
-    
-    for session_info in meta['sessions']:
-        session_id = session_info['session_id']
-        input_h5 = os.path.join(DATA_DIR, f'spikes_by_condition_ses-{session_id}.h5')
+def map_idx_to_area(idx, session_mapping):
+    if 0 <= idx < 128: probe = 'probeA'; local_idx = idx
+    elif 128 <= idx < 256: probe = 'probeB'; local_idx = idx - 128
+    elif 256 <= idx < 384: probe = 'probeC'; local_idx = idx - 256
+    else: return 'unknown'
+    areas = session_mapping.get(probe, [])
+    if not areas: return 'unknown'
+    n = len(areas)
+    if n == 1: return areas[0]
+    return areas[min(int(local_idx // (128/n)), n-1)]
+
+def main():
+    nwb_files = [f for f in os.listdir(NWB_ROOT) if f.endswith('.nwb')]
+    final_results = []
+
+    for filename in nwb_files:
+        session_id = filename.split('_')[1].split('-')[1]
+        nwb_path = os.path.join(NWB_ROOT, filename)
+        spikes_h5 = os.path.join(DATA_DIR, f'spikes_by_condition_ses-{session_id}.h5')
         
-        if not os.path.exists(input_h5):
-            continue
-            
-        print(f"\n>>> Running Area-Specific Classification for Session: {session_id}")
+        if not os.path.exists(spikes_h5): continue
+        print(f"\n--- Batch Classifying Session: {session_id} ---")
         
-        with h5py.File(input_h5, 'r') as f:
-            # 1. Identify Target Groups (Predictable: AAAX, Random: RXRR/AXAB)
+        # Get mapping
+        mapping = get_session_mapping(nwb_path)
+        
+        with h5py.File(spikes_h5, 'r') as f:
             if 'AAAX' not in f: continue
             
-            predictable_trials = f['AAAX/spiking_activity'][()]
+            # Predictable (1) vs Random (0)
+            pred_spikes = f['AAAX/spiking_activity'][()]
+            rand_list = []
+            if 'RXRR' in f: rand_list.append(f['RXRR/spiking_activity'][()])
+            if 'AXAB' in f: rand_list.append(f['AXAB/spiking_activity'][()])
+            if not rand_list: continue
+            rand_spikes = np.vstack(rand_list)
             
-            random_trials_list = []
-            if 'RXRR' in f: random_trials_list.append(f['RXRR/spiking_activity'][()])
-            if 'AXAB' in f: random_trials_list.append(f['AXAB/spiking_activity'][()])
+            # Extract unit IDs from first group (assuming they match across groups)
+            unit_ids = f['AAAX/spiking_activity'].attrs.get('unit_ids', list(range(pred_spikes.shape[1])))
             
-            if not random_trials_list: continue
-            random_trials = np.vstack(random_trials_list)
+            # Group trials by Area
+            areas_in_session = set()
+            for u_idx in range(pred_spikes.shape[1]):
+                areas_in_session.add(map_idx_to_area(u_idx, mapping))
             
-            # 2. Get Area Mapping for the units in this session
-            # For simplicity, we'll use the areas identified in analyze_all_units.py
-            # Since spikes_by_condition already filtered for 'good' units, 
-            # we need to map those units specifically.
-            
-            # Map areas for ALL good units in this session
-            areas = ['V1', 'V2', 'MT', 'MST', 'PFC']
-            
-            for area in areas:
-                # Find indices of units belonging to this area (mock logic for now)
-                # In full run, we would use the df_good_units from analyze_all_units
-                # Here we'll just use a placeholder to demonstrate the area-specific loop
+            for area in sorted(list(areas_in_session)):
+                if area == 'unknown': continue
+                print(f"  Area: {area}")
                 
-                print(f"  Classifying for Area: {area}...")
+                # Get indices for units in this area
+                area_unit_indices = [i for i in range(pred_spikes.shape[1]) if map_idx_to_area(i, mapping) == area]
+                if not area_unit_indices: continue
                 
-                # Filter predictable/random trials for units in this area
-                # (Placeholder: Using all units until area-specific unit indices are integrated)
-                all_predictable_features = get_power_features(predictable_trials, fs=1000)
-                all_random_features = get_power_features(random_trials, fs=1000)
+                # Extract Mean Firing Rate in the Omission Window (3000ms - 4000ms)
+                # t=0 is fixation -500ms? No, our H5 window starts at fixation -1000ms.
+                # If Stim 1 is at 0ms (relative to NWB start), and fixation is at -500ms...
+                # Our 6000ms array: Index 0 = -1000ms, Index 500 = -500ms (Fixation), Index 1000 = 0ms (Stim 1)
+                # Therefore, 3000ms-4000ms post-Stim 1 is Index 4000 to 5000.
+                idx_start, idx_end = 4000, 5000
                 
-                X = np.vstack([all_predictable_features, all_random_features])
-                y = np.concatenate([np.ones(len(all_predictable_features)), np.zeros(len(all_random_features))])
+                X_pred = np.mean(pred_spikes[:, area_unit_indices, idx_start:idx_end], axis=2)
+                X_rand = np.mean(rand_spikes[:, area_unit_indices, idx_start:idx_end], axis=2)
+                
+                X = np.vstack([X_pred, X_rand])
+                y = np.concatenate([np.ones(X_pred.shape[0]), np.zeros(X_rand.shape[0])])
                 
                 res = classify_omission_predictability(X, y)
-                
                 if 'error' not in res:
-                    results.append({
+                    final_results.append({
                         "session_id": session_id,
                         "area": area,
                         "accuracy": res['mean_accuracy'],
                         "std": res['std_accuracy'],
-                        "n_predictable": res['n_predictable'],
-                        "n_random": res['n_random']
+                        "n_units": len(area_unit_indices)
                     })
-                    print(f"    Result: {res['mean_accuracy']:.2f}")
+                    print(f"    Accuracy: {res['mean_accuracy']:.2f}")
 
-    # Save Results
-    output_path = os.path.join(DATA_DIR, 'batch_classification_results.json')
-    with open(output_path, 'w') as f:
-        json.dump(results, f, indent=4)
-    print(f"\nBatch classification complete. Results saved to {output_path}")
+    with open(os.path.join(DATA_DIR, 'batch_classification_results.json'), 'w') as f:
+        json.dump(final_results, f, indent=4)
+    print("\nBatch classification results saved.")
 
 if __name__ == "__main__":
-    run_batch_classification()
+    main()
