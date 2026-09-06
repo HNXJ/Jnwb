@@ -137,6 +137,8 @@ All 101 core functions, classes, and constants exported in the top-level jnwb na
 
 | Symbol | Type | Signature / Description |
 |---|---|---|
+| jnwb.DB_AGGREGATIONS | constant | ('mean_of_ratios', 'ratio_of_means')<br>*The two accepted estimands for `aggregate_to_db`; they differ, so the caller names one.* |
+| jnwb.aggregate_to_db | function | aggregate_to_db(power, baseline, *, how: str, aggregate_over=None, nan_policy: str = 'propagate')<br>*Form the ratio, aggregate on the ratio scale, then `10*log10` exactly once.* |
 | jnwb.band_power | function | band_power(lfp_trace: numpy.ndarray, sampling_rate: float, freq_range: Tuple[float, float], normalize: bool = True, baseline: numpy.ndarray | None = None, device: str = 'cpu') -> float<br>*Compute power in a frequency band.* |
 | jnwb.bipolar_reference | function | bipolar_reference(channel_data: numpy.ndarray, channel_order: numpy.ndarray | None = None) -> numpy.ndarray<br>*Bipolar (adjacent-channel difference) re-reference along a probe's depth order.* |
 | jnwb.compute_psd | function | compute_psd(lfp_data: numpy.ndarray, fs: float)<br>*Welch power spectral density of a plain LFP array.* |

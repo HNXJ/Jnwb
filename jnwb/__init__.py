@@ -224,6 +224,8 @@ from .metadata import (
 # jnwb/spectral.py's module docstring).
 from .spectral import (
     to_db,
+    aggregate_to_db,
+    DB_AGGREGATIONS,
     harmonic_analysis,
     cross_area_coherence,
     spectral_tilt,
@@ -382,6 +384,8 @@ __all__ = [
 
     # Spectral analysis
     'to_db',
+    'aggregate_to_db',
+    'DB_AGGREGATIONS',
     'harmonic_analysis',
     'cross_area_coherence',
     'spectral_tilt',

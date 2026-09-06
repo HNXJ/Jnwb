@@ -55,6 +55,99 @@ def to_db(ratio):
         return 10.0 * np.log10(ratio)
 
 
+#: Accepted aggregation estimands for :func:`aggregate_to_db`. These are genuinely different
+#: estimands, not implementation details, which is why the caller must name one:
+#: ``sum_c P_c / sum_c P0_c == sum_c w_c (P_c / P0_c)`` with ``w_c = P0_c / sum_j P0_j`` --
+#: i.e. "ratio_of_means" is a baseline-power-weighted average of the very same per-unit ratios
+#: that "mean_of_ratios" weights equally. A quiet default would silently pick one for the caller.
+DB_AGGREGATIONS = ("mean_of_ratios", "ratio_of_means")
+
+
+def aggregate_to_db(
+    power,
+    baseline,
+    *,
+    how: str,
+    aggregate_over=None,
+    nan_policy: str = "propagate",
+):
+    """Form a power ratio, aggregate on the RATIO scale, and take ``10*log10`` exactly once.
+
+    This is the enforcing form of :func:`to_db`. ``to_db`` is a bare conversion: it cannot stop
+    a caller who already holds decibels from averaging them. Averaging decibels is a Jensen
+    error -- ``mean(log x) != log(mean x)`` -- and it biases every unit by its own noisiness,
+    which is the failure CLAUDE.md tripwire 2 ("take the logarithm last") exists to prevent.
+    Stating the rule did not prevent it; this function makes the correct order the only order
+    reachable through the API.
+
+    Args:
+        power: signal-interval power, ratio-scale and non-negative. Any shape.
+        baseline: baseline power for the same units, broadcastable against ``power``.
+        how: which estimand to form, named explicitly -- no default. ``"mean_of_ratios"``
+            weights every unit equally; ``"ratio_of_means"`` weights each unit by its own
+            baseline power (see :data:`DB_AGGREGATIONS`). Geometric mean is deliberately not
+            offered: ``10*log10(geomean(r)) == mean(10*log10(r))`` identically, so it is
+            mean-of-decibels -- the defect itself -- under a respectable name.
+        aggregate_over: axis or tuple of axes to aggregate the ratios over. ``None`` performs
+            no aggregation and simply converts the elementwise ratio, still logging once.
+        nan_policy: ``"propagate"`` (default) or ``"omit"`` to aggregate over non-NaN entries
+            only. Artifact repair legitimately leaves NaNs behind, so omitting is a real
+            choice -- but it is never the silent one.
+
+    Returns:
+        Decibel array, reduced along ``aggregate_over``.
+
+    Raises:
+        ValueError: if ``how`` or ``nan_policy`` is not recognised, or if any input is
+            negative. The negativity check is the dB-input tripwire: a ratio-scale power is
+            non-negative by definition, whereas decibel arrays routinely carry negative
+            values, so passing decibels in here fails loudly instead of computing a plausible
+            wrong number. It is a guard, not a proof -- an all-positive dB array cannot be
+            distinguished from power by inspection, so the contract remains: pass power.
+
+    Example:
+        >>> import numpy as np
+        >>> p = np.array([[2.0, 4.0], [8.0, 4.0]])   # (units, trials)
+        >>> b = np.array([[1.0, 1.0], [2.0, 2.0]])
+        >>> float(aggregate_to_db(p, b, how="mean_of_ratios", aggregate_over=None)[0, 0])
+        3.0102999566398116
+    """
+    if how not in DB_AGGREGATIONS:
+        if str(how).lower() in ("geometric", "geomean", "geometric_mean"):
+            raise ValueError(
+                "how='geometric' is deliberately unsupported: 10*log10(geomean(r)) is "
+                "identically mean(10*log10(r)), i.e. averaging decibels -- the exact defect "
+                f"this function exists to prevent. Choose one of {list(DB_AGGREGATIONS)}."
+            )
+        raise ValueError(f"how must be one of {list(DB_AGGREGATIONS)}; got {how!r}")
+    if nan_policy not in ("propagate", "omit"):
+        raise ValueError(f"nan_policy must be 'propagate' or 'omit'; got {nan_policy!r}")
+
+    p = np.asarray(power, dtype=float)
+    b = np.asarray(baseline, dtype=float)
+    for name, arr in (("power", p), ("baseline", b)):
+        if arr.size and np.any(arr < 0):
+            raise ValueError(
+                f"{name} contains negative values, so it is not ratio-scale power. If these "
+                "are already decibels, do not aggregate them: pass the underlying power and "
+                "baseline and let this function take the logarithm last."
+            )
+
+    mean = np.nanmean if nan_policy == "omit" else np.mean
+    total = np.nansum if nan_policy == "omit" else np.sum
+
+    with np.errstate(divide="ignore", invalid="ignore"):
+        if aggregate_over is None:
+            aggregated = p / b
+        elif how == "mean_of_ratios":
+            aggregated = mean(p / b, axis=aggregate_over)
+        else:
+            num = total(p, axis=aggregate_over)
+            den = total(np.broadcast_to(b, p.shape), axis=aggregate_over)
+            aggregated = num / den
+        return to_db(aggregated)
+
+
 def compute_psd(lfp_data: np.ndarray, fs: float):
     """Welch power spectral density of a plain LFP array.
 

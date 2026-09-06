@@ -34,6 +34,52 @@ freqs, psd = jnwb.compute_psd(lfp_trace, fs=1000.0)
 beta_power_val = jnwb.band_power(lfp_trace, sampling_rate=1000.0, freq_range=(14.0, 30.0))
 ```
 
+### Decibel Formation (`aggregate_to_db`, `to_db`, `DB_AGGREGATIONS`)
+
+Take the logarithm **last**. Form the per-unit ratio `P / P0`, aggregate the *ratios*, and
+convert once. Averaging decibels is a Jensen error -- `mean(log x) != log(mean x)` -- and it
+biases every unit by its own noisiness, so a noisier channel is pulled toward a different
+answer than a quiet one measuring the same effect.
+
+`to_db(ratio)` is the bare conversion and cannot enforce anything: by the time a caller holds
+decibels, the mistake is already available. `aggregate_to_db` is the enforcing form -- it owns
+the whole ratio-aggregate-log sequence, so the correct order is the only order reachable
+through it.
+
+```python
+# power, baseline: (n_units, n_trials), ratio-scale and non-negative
+db = jnwb.aggregate_to_db(power, baseline, how="mean_of_ratios", aggregate_over=1)
+
+# Element-wise conversion, no aggregation -- still logs exactly once
+db_per_trial = jnwb.aggregate_to_db(power, baseline, how="mean_of_ratios")
+```
+
+**`how` has no default, on purpose.** The two members of `DB_AGGREGATIONS` are different
+estimands, not implementation details:
+
+| `how` | Estimand | Weighting |
+|---|---|---|
+| `"mean_of_ratios"` | mean of each unit's own ratio | every unit counts equally |
+| `"ratio_of_means"` | summed power over summed baseline | each unit weighted by its baseline power |
+
+They coincide only when the baseline is constant across the aggregated axis. In general
+`sum_c P_c / sum_c P0_c = sum_c w_c (P_c / P0_c)` with `w_c = P0_c / sum_j P0_j`, so
+`"ratio_of_means"` is a baseline-weighted version of the very same per-unit ratios. A silent
+default would pick one of these for you.
+
+**Geometric mean is deliberately rejected** rather than offered as a third option, because
+`10*log10(geomean(r))` is *identically* `mean(10*log10(r))` -- it is mean-of-decibels wearing a
+respectable name. Passing `how="geomean"` raises and says so.
+
+**Negative input raises.** Ratio-scale power is non-negative by definition, whereas decibel
+arrays routinely carry negative values, so handing decibels to this function usually fails
+loudly instead of returning a plausible wrong number. Treat that as a guard, not a proof: an
+all-positive decibel array is indistinguishable from power by inspection, so the contract still
+stands -- pass power and baseline, never decibels.
+
+`nan_policy="omit"` aggregates over non-NaN entries only. Artifact repair legitimately leaves
+NaNs behind, so this is a real choice, but never a silent one.
+
 ### Spectral Tilt, Harmonic Analysis & Referencing
 
 ```python

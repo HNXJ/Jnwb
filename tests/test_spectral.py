@@ -9,6 +9,8 @@ import pytest
 
 from jnwb.spectral import (
     to_db,
+    aggregate_to_db,
+    DB_AGGREGATIONS,
     harmonic_analysis,
     cross_area_coherence,
     spectral_tilt,
@@ -188,3 +190,96 @@ class TestLaplacianReference:
         data = np.stack([common, common, common, common])
         out = laplacian_reference(data)
         assert np.allclose(out[1:-1], 0.0)
+
+
+class TestAggregateToDb:
+    """The log-last contract: aggregate ratios, take 10*log10 exactly once.
+
+    These tests pin the *defect* the function exists to prevent, not just its happy path --
+    averaging decibels is a Jensen error, and the whole point of the primitive is that the
+    wrong order is unreachable through it.
+    """
+
+    def test_matches_hand_computed_log_last(self):
+        power = np.array([[2.0, 4.0]])
+        baseline = np.array([[1.0, 2.0]])
+        # ratios 2.0 and 2.0 -> mean 2.0 -> 10*log10(2.0)
+        got = aggregate_to_db(power, baseline, how="mean_of_ratios", aggregate_over=1)
+        np.testing.assert_allclose(got, 10.0 * np.log10(2.0))
+
+    def test_differs_from_averaging_decibels(self):
+        """The Jensen gap is real and non-zero for any non-degenerate ratio spread."""
+        power = np.array([[1.0, 100.0]])
+        baseline = np.ones((1, 2))
+        log_last = aggregate_to_db(power, baseline, how="mean_of_ratios", aggregate_over=1)
+        log_first = np.mean(to_db(power / baseline), axis=1)
+        assert not np.allclose(log_last, log_first)
+        # log-last is the larger: mean(log x) <= log(mean x) by Jensen.
+        assert log_last[0] > log_first[0]
+
+    def test_two_estimands_actually_differ_when_baseline_varies(self):
+        power = np.array([[1.0, 10.0]])
+        baseline = np.array([[1.0, 100.0]])
+        mor = aggregate_to_db(power, baseline, how="mean_of_ratios", aggregate_over=1)
+        rom = aggregate_to_db(power, baseline, how="ratio_of_means", aggregate_over=1)
+        assert not np.allclose(mor, rom)
+
+    def test_estimands_coincide_when_baseline_constant(self):
+        power = np.array([[2.0, 6.0]])
+        baseline = np.full((1, 2), 2.0)
+        mor = aggregate_to_db(power, baseline, how="mean_of_ratios", aggregate_over=1)
+        rom = aggregate_to_db(power, baseline, how="ratio_of_means", aggregate_over=1)
+        np.testing.assert_allclose(mor, rom)
+
+    def test_how_is_required_keyword(self):
+        with pytest.raises(TypeError):
+            aggregate_to_db(np.ones(3), np.ones(3))
+
+    def test_geometric_mean_rejected_with_reason(self):
+        """geomean is mean-of-dB identically, so offering it would ship the bug."""
+        r = np.array([1.0, 4.0, 16.0])
+        np.testing.assert_allclose(to_db(float(np.exp(np.mean(np.log(r))))), np.mean(to_db(r)))
+        with pytest.raises(ValueError, match="deliberately unsupported"):
+            aggregate_to_db(np.ones(3), np.ones(3), how="geomean")
+
+    def test_unknown_how_and_nan_policy_rejected(self):
+        with pytest.raises(ValueError, match="how must be one of"):
+            aggregate_to_db(np.ones(3), np.ones(3), how="median_of_ratios")
+        with pytest.raises(ValueError, match="nan_policy"):
+            aggregate_to_db(np.ones(3), np.ones(3), how="mean_of_ratios", nan_policy="drop")
+
+    def test_negative_input_raises_as_db_tripwire(self):
+        db_like = np.array([-3.0, 1.0, -0.5])
+        with pytest.raises(ValueError, match="not ratio-scale power"):
+            aggregate_to_db(db_like, np.ones(3), how="mean_of_ratios")
+        with pytest.raises(ValueError, match="baseline contains negative"):
+            aggregate_to_db(np.ones(3), -np.ones(3), how="mean_of_ratios")
+
+    def test_nan_policy_propagate_vs_omit(self):
+        power = np.array([[2.0, np.nan]])
+        baseline = np.ones((1, 2))
+        assert np.isnan(aggregate_to_db(power, baseline, how="mean_of_ratios",
+                                        aggregate_over=1)[0])
+        omitted = aggregate_to_db(power, baseline, how="mean_of_ratios",
+                                  aggregate_over=1, nan_policy="omit")
+        np.testing.assert_allclose(omitted, to_db(2.0))
+
+    def test_no_aggregation_is_elementwise_and_logs_once(self):
+        power = np.array([[2.0, 4.0]])
+        baseline = np.ones((1, 2))
+        np.testing.assert_allclose(
+            aggregate_to_db(power, baseline, how="mean_of_ratios"), to_db(power / baseline))
+
+    def test_broadcasts_baseline_against_power(self):
+        power = np.array([[2.0, 4.0], [8.0, 16.0]])
+        baseline = np.array([2.0, 4.0])
+        np.testing.assert_allclose(
+            aggregate_to_db(power, baseline, how="mean_of_ratios"), to_db(power / baseline))
+
+    def test_aggregations_constant_is_the_documented_pair(self):
+        assert DB_AGGREGATIONS == ("mean_of_ratios", "ratio_of_means")
+
+    def test_importable_from_top_level(self):
+        import jnwb
+        assert jnwb.aggregate_to_db is aggregate_to_db
+        assert jnwb.DB_AGGREGATIONS is DB_AGGREGATIONS
