@@ -92,3 +92,20 @@ All multi-step agent actions follow the PRGS operational loop:
 - Be concise, skeptical, and direct.
 - Surface blocking friction, contradictions, or drift immediately.
 - List unresolved material issues at the conclusion of deliverables.
+
+### Scientific Writing, Vocabulary & Methodological Distinctions
+1. **Scientific Voice over Process Jargon**:
+   - Prefer direct, compact, quantitative, skeptical scientific vocabulary: `result`, `test`, `analysis`, `table`, `figure`, `source`, `method`, `limit`, `condition`.
+   - Avoid governance/process jargon in scientific prose: avoid `framework`, `doctrine`, `contract`, `ontology`, `evidence architecture`, `claim machinery`, `pipeline governance`.
+   - Avoid promotional, marketing, or exaggerated language ("striking", "compelling majority", "revolutionary").
+2. **Critical Scientific & Methodological Distinctions**:
+   - **Response Magnitude vs. Temporal Precision**: Large signal modulation or power changes do not imply high temporal precision or well-localized onset latency.
+   - **Detected vs. Temporally Resolved**: Detecting that an effect or modulation is present does not by itself establish that its event timing is resolved with an admissible latency.
+   - **Precision, Latency, Estimator Disagreement & Boundary Censoring**:
+     - `temporal precision / resolution`: Uncertainty limit supported by the recording signal, sampling, and transform window.
+     - `temporally resolved`: Methodological classification indicating an event response met latency-fit quality and admissibility criteria.
+     - `latency`: Estimated event-relative timing.
+     - `estimator spread`: Disagreement among alternative onset or latency estimators.
+     - `boundary censoring`: Estimates pinned to search boundaries represent censored bounds, not unconstrained point latencies.
+   - **Inferential Unit Hierarchy**: Descriptive percentages or summary statistics computed across lower-level observations (e.g. units or trials) must not substitute for or contradict hypothesis tests evaluated at the declared higher-level inferential unit (e.g. sessions or subjects).
+   - **Association vs. Causality**: Observational correlation, descriptive timing, spectral coherence, or directed phase/information metrics do not establish physical causality or perturbation mechanisms.

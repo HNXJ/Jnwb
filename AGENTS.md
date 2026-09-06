@@ -46,8 +46,9 @@ All multi-step agent actions follow the PRGS operational loop:
 3. **Causal & Directional Claims**:
    - `Association ≠ Directionality ≠ Causality`.
    - Correlation, Granger causality / phase slope index / transfer entropy, and perturbation/causal mechanisms require progressively stronger designs. Do not describe a weaker statistical metric with a stronger causal verb.
-4. **Logarithm Last**:
-   - When computing spectral power or decibel changes: average raw power across trials, normalize by baseline, and compute `10 · log10(power)` once at the final step. Never average pre-computed decibels across sites or animals.
+4. **Logarithmic Estimand Clarity**:
+   - Explicitly declare whether the estimand is arithmetic mean of raw power ($\mathbb{E}[P]$, physical power conservation) or logarithmic power ($\mathbb{E}[\log P]$, geometric mean / log-normal central tendency).
+   - When the declared estimand is physical raw-power conservation across trials, average raw power before converting to decibels. Where the declared estimand is log-normal power distribution across units or sites, averaging log-transformed power/dB is legitimate and must be explicitly specified as such. Never confuse the two estimands.
 5. **Unit of Inference**:
    - Explicitly declare the inferential unit (unit, channel, trial, or session/animal) for all degrees of freedom and statistical tests. Cluster/hierarchical structure must be accounted for (e.g. session-cluster bootstrap, GLMM).
 6. **Valid Nulls**:
@@ -55,6 +56,23 @@ All multi-step agent actions follow the PRGS operational loop:
 7. **No Synthetic Science**:
    - No empirical value may exist in any output that no verified script computed from real data.
    - If placeholder/synthetic data is required for scaffolding, the output and figure must display an unmissable red `PLACEHOLDER-DUMMY` banner.
+
+### Scientific Writing, Vocabulary & Methodological Distinctions
+1. **Scientific Voice over Process Jargon**:
+   - Prefer direct, compact, quantitative, skeptical scientific vocabulary: `result`, `test`, `analysis`, `table`, `figure`, `source`, `method`, `limit`, `condition`.
+   - Avoid governance/process jargon in scientific prose: avoid `framework`, `doctrine`, `contract`, `ontology`, `evidence architecture`, `claim machinery`, `pipeline governance`.
+   - Avoid promotional, marketing, or exaggerated language ("striking", "compelling majority", "revolutionary").
+2. **Critical Scientific & Methodological Distinctions**:
+   - **Response Magnitude vs. Temporal Precision**: Large signal modulation or power changes do not imply high temporal precision or well-localized onset latency.
+   - **Detected vs. Temporally Resolved**: Detecting that an effect or modulation is present does not by itself establish that its event timing is resolved with an admissible latency.
+   - **Precision, Latency, Estimator Disagreement & Boundary Censoring**:
+     - `temporal precision / resolution`: Uncertainty limit supported by the recording signal, sampling, and transform window.
+     - `temporally resolved`: Methodological classification indicating an event response met latency-fit quality and admissibility criteria.
+     - `latency`: Estimated event-relative timing.
+     - `estimator spread`: Disagreement among alternative onset or latency estimators.
+     - `boundary censoring`: Estimates pinned to search boundaries represent censored bounds, not unconstrained point latencies.
+   - **Inferential Unit Hierarchy**: Descriptive percentages or summary statistics computed across lower-level observations (e.g. units or trials) must not substitute for or contradict hypothesis tests evaluated at the declared higher-level inferential unit (e.g. sessions or subjects).
+   - **Association vs. Causality**: Observational correlation, descriptive timing, spectral coherence, or directed phase/information metrics do not establish physical causality or perturbation mechanisms.
 
 ---
 

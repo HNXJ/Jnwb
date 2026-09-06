@@ -1,8 +1,7 @@
 """Guards the jnwb/ freeze boundary (CLAUDE.md, 2026-08-19): jnwb/ is frozen and must remain
-importable and usable with zero dependency on omission/, except two explicitly authorized,
-call-time-only exceptions (multi-area probe splitting in addressing.py, PSI delegation in
-jrsa.py -- both need this project's area/band-naming conventions and were judged not worth
-duplicating into jnwb/ for a single call site each).
+importable and usable with zero dependency on omission/, except for explicitly authorized
+exceptions. As of 2026-09-03 there are NONE: jnwb/ imports nothing from omission/, so its
+scientific behaviour cannot depend on whether a project package is installed.
 
 This is the automated guarantee behind the freeze: a human reading CLAUDE.md's freeze policy is
 not a technical guarantee that no new jnwb/ change quietly reintroduces an omission/ coupling.
@@ -17,14 +16,19 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 JNWB_DIR = REPO_ROOT / "jnwb"
+TESTS_DIR = REPO_ROOT / "tests"
 
 # (path relative to jnwb/, fully-qualified module imported) -- the ONLY omission-side imports
 # jnwb/ may contain, and only as lazy, function-body-local imports. Any other omission import
-# anywhere under jnwb/, or either of these two outside a function body, fails the freeze.
-AUTHORIZED_EXCEPTIONS = {
-    ("addressing.py", "omission.jnwb_ext.sequence_layout"),
-    ("jrsa.py", "omission.jnwb_ext.connectivity"),
-}
+# anywhere under jnwb/, whether or not inside a function body, fails the freeze.
+#
+# This set is now EMPTY. addressing.py's exception was removed 2026-09-03: importing the
+# project's parser meant jnwb resolved probe areas differently depending on whether omission
+# happened to be importable, so installing a project package silently changed which cortical
+# area a unit was assigned to. addressing.py now carries no area vocabulary at all: it only
+# splits the label on comma or slash and trims whitespace, preserving every label as written.
+# jrsa.py's exception went with the connectivity promotion on 2026-08-23.
+AUTHORIZED_EXCEPTIONS: set = set()
 
 
 def _iter_py_files():
@@ -79,6 +83,29 @@ class TestJnwbFrozenBoundary:
         assert not violations, (
             "An authorized omission/ import is no longer lazy -- this breaks the guarantee that "
             "jnwb/ is importable without omission/ present:\n" + "\n".join(violations)
+        )
+
+    def test_jnwb_test_suite_does_not_import_omission(self):
+        """The suite that guards the freeze must itself run without omission/ present.
+
+        omission/ is untracked (2026-09-03), so a CI checkout contains only jnwb. A single
+        `from omission... import ...` in tests/ therefore turns `pytest tests/` red on every
+        run while still passing on any developer machine that has omission checked out --
+        which is exactly what happened between 2026-09-03 and 2026-09-04. Project-side tests
+        belong in omission/tests/.
+        """
+        violations = []
+        for f in TESTS_DIR.rglob("*.py"):
+            if "__pycache__" in f.parts:
+                continue
+            tree = ast.parse(f.read_text(encoding="utf-8"), filename=str(f))
+            for lineno, modname, _ in _omission_imports(tree):
+                violations.append(f"tests/{f.relative_to(TESTS_DIR).as_posix()}:{lineno} "
+                                  f"imports {modname!r}")
+        assert not violations, (
+            "The jnwb test suite imports a project package, so it cannot run on a checkout "
+            "that has only jnwb (i.e. CI). Move these tests into omission/tests/:\n"
+            + "\n".join(violations)
         )
 
     def test_jnwb_importable_without_omission_on_sys_path(self):

@@ -17,8 +17,8 @@ import pytest
 
 from scripts.harness_gate import (
     check_frozen_boundary,
+    check_logarithm_last_rule,
     check_modality_isolation,
-    omission_check_logarithm_last_rule,
     validate_receipt_provenance,
 )
 
@@ -56,26 +56,42 @@ class TestHarnessAdversarialProbes:
         assert "EMPTY_RECEIPT" in msg
 
     def test_adversarial_probe_logarithm_before_average_rejected(self):
-        """Adversarial Probe 3: Averaging decibels before power normalization must be caught."""
-        # Bad code: average across sites of to_db(power)
+        """Adversarial Probe 3: Averaging decibels when estimand is raw power must be caught."""
+        # Bad code declaring raw power estimand but averaging dB
         bad_code = """
+# estimand: raw_power_average
 import numpy as np
 def compute_site_power(raw_power):
     db = to_db(raw_power)
     return np.mean(db)
 """
-        violations = omission_check_logarithm_last_rule(bad_code)
-        assert len(violations) > 0, "Gate failed to catch log-before-average violation!"
+        violations = check_logarithm_last_rule(bad_code)
+        assert len(violations) > 0, "Gate failed to catch log-before-average violation when estimand is raw power!"
         assert "LOG_BEFORE_AVERAGE" in violations[0]
 
         # Good code: average raw power first, to_db once at the end
         good_code = """
+# estimand: raw_power_average
 import numpy as np
 def compute_site_power_correct(raw_power):
     avg_power = np.mean(raw_power)
     return to_db(avg_power)
 """
-        assert len(omission_check_logarithm_last_rule(good_code)) == 0
+        assert len(check_logarithm_last_rule(good_code)) == 0
+
+    def test_adversarial_control_legitimate_mean_of_db_accepted(self):
+        """Adversarial Control: Legitimate mean-of-dB code (e.g. log-normal stats) is NOT globally rejected."""
+        legitimate_db_code = """
+import numpy as np
+
+def summarize_log_normal_effects(unit_db_modulations):
+    \"\"\"Compute sample mean of decibel values across recorded units (geometric mean of power).\"\"\"
+    mean_db = np.mean(unit_db_modulations)
+    sem_db = np.std(unit_db_modulations) / np.sqrt(len(unit_db_modulations))
+    return mean_db, sem_db
+"""
+        violations = check_logarithm_last_rule(legitimate_db_code)
+        assert len(violations) == 0, "Legitimate mean-of-dB code was improperly rejected!"
 
     def test_adversarial_probe_unnamespaced_modality_pooling_rejected(self):
         """Adversarial Probe 4: Mixing SPK and LFP without explicit namespaces must be rejected."""
@@ -122,23 +138,61 @@ def compute_site_power_correct(raw_power):
         assert "UNDOCUMENTED_PUBLIC_SYMBOL" in violations[0]
 
     def test_adversarial_probe_dataset_leakage_rejected(self, tmp_path: Path):
-        """Adversarial Probe 7: Experiment condition tokens in jnwb/ or skills/ must be caught."""
+        """Adversarial Probe 7: Experiment condition tokens and manuscript results must be caught."""
         from scripts.harness_gate import check_dataset_leakage
         fake_jnwb = tmp_path / "jnwb"
         fake_skills = tmp_path / "skills"
+        fake_docs = tmp_path / "docs"
+        fake_artifacts = tmp_path / "artifacts"
         fake_jnwb.mkdir()
         fake_skills.mkdir()
+        fake_docs.mkdir()
+        fake_artifacts.mkdir()
 
-        (fake_jnwb / "clean.py").write_text("def foo(): pass\n", encoding="utf-8")
-        (fake_skills / "SKILL.md").write_text("description: clean\n", encoding="utf-8")
-        assert len(check_dataset_leakage(tmp_path)) == 0
+        # Clean generic neuroscience terms MUST be permitted (no naive word ban)
+        clean_text = (
+            "# Generic Electrophysiology Guide\n"
+            "Analyze SPK unit spike trains and continuous LFP traces.\n"
+            "Estimate response latency in theta, alpha, beta, and gamma frequency bands.\n"
+        )
+        (fake_jnwb / "clean.py").write_text("def compute_latency(spk, lfp, fs=1000.0): pass\n", encoding="utf-8")
+        (fake_skills / "SKILL.md").write_text(clean_text, encoding="utf-8")
+        (tmp_path / "AGENTS.md").write_text(clean_text, encoding="utf-8")
+        (fake_artifacts / "AGENTS.md").write_text(clean_text, encoding="utf-8")
+        (fake_docs / "11_extending_and_development.md").write_text(clean_text, encoding="utf-8")
 
-        # Inject AXAB condition code
+        assert len(check_dataset_leakage(tmp_path)) == 0, "Clean generic terms should not trigger violations!"
+
+        # 1. Leak condition code into jnwb
         (fake_jnwb / "leaky.py").write_text("CONDITION = 'AXAB'\n", encoding="utf-8")
-        violations = check_dataset_leakage(tmp_path)
-        assert len(violations) == 1
-        assert "DATASET_LEAKAGE" in violations[0]
-        assert "AXAB" in violations[0]
+        v1 = check_dataset_leakage(tmp_path)
+        assert len(v1) == 1 and "AXAB" in v1[0]
+        (fake_jnwb / "leaky.py").unlink()
+
+        # 2. Leak manuscript p-value into AGENTS.md
+        (tmp_path / "AGENTS.md").write_text("The session-level test was p = 0.053\n", encoding="utf-8")
+        v2 = check_dataset_leakage(tmp_path)
+        assert len(v2) == 1 and "0.053" in v2[0]
+        (tmp_path / "AGENTS.md").write_text(clean_text, encoding="utf-8")
+
+        # 3. Leak study-specific finding into docs/11_extending_and_development.md
+        (fake_docs / "11_extending_and_development.md").write_text(
+            "Found beta/gamma temporal resolvability > theta/alpha at session level\n", encoding="utf-8"
+        )
+        v3 = check_dataset_leakage(tmp_path)
+        assert len(v3) >= 1 and any("beta/gamma" in v for v in v3)
+        (fake_docs / "11_extending_and_development.md").write_text(clean_text, encoding="utf-8")
+
+        # 4. Leak study-specific concept into artifacts/AGENTS.md
+        (fake_artifacts / "AGENTS.md").write_text("Study focuses on omission-linked dynamics\n", encoding="utf-8")
+        v4 = check_dataset_leakage(tmp_path)
+        assert len(v4) == 1 and "omission-linked" in v4[0]
+        (fake_artifacts / "AGENTS.md").write_text(clean_text, encoding="utf-8")
+
+        # 5. Leak forbidden causal assertion into skills
+        (fake_skills / "SKILL.md").write_text("Demonstrates that LFP drives SPK\n", encoding="utf-8")
+        v5 = check_dataset_leakage(tmp_path)
+        assert len(v5) == 1 and "LFP drives SPK" in v5[0]
 
     def test_adversarial_probe_version_inconsistency_rejected(self, tmp_path: Path):
         """Adversarial Probe 8: Inconsistent package vs pyproject version must be caught."""
@@ -147,6 +201,27 @@ def compute_site_power_correct(raw_power):
         violations = check_version_consistency(tmp_path)
         assert len(violations) > 0
         assert "VERSION_INCONSISTENCY" in violations[0]
+
+    def test_adversarial_probe_python_target_inconsistency_rejected(self, tmp_path: Path):
+        """Adversarial Probe 9: Non-Python 3.12 targets in pyproject or workflows must be caught."""
+        from scripts.harness_gate import check_python_target_consistency
+        (tmp_path / "pyproject.toml").write_text(
+            '[project]\nrequires-python = ">=3.10"\nclassifiers = ["Programming Language :: Python :: 3.10"]\n',
+            encoding="utf-8"
+        )
+        violations = check_python_target_consistency(tmp_path)
+        assert len(violations) >= 2
+        assert all("PYTHON_TARGET_INCONSISTENCY" in v for v in violations)
+
+    def test_adversarial_probe_hardcoded_test_paths_rejected(self, tmp_path: Path):
+        """Adversarial Probe 10: Hardcoded machine-local test paths must be caught."""
+        from scripts.harness_gate import check_no_hardcoded_test_paths
+        tests_dir = tmp_path / "tests"
+        tests_dir.mkdir()
+        (tests_dir / "test_leaky.py").write_text('TEST_FILE = "D:/analysis/nwb/real.nwb"\n', encoding="utf-8")
+        violations = check_no_hardcoded_test_paths(tmp_path)
+        assert len(violations) == 1
+        assert "HARDCODED_TEST_PATH" in violations[0]
 
     def test_real_repository_passes_all_harness_gates(self):
         """Integrity Probe: Live repository state must pass all preflight gates."""

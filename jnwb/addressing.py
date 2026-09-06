@@ -17,6 +17,41 @@ import numpy as np
 log = logging.getLogger(__name__)
 
 
+def parse_probe_areas(label: str) -> tuple:
+    """Split a multi-area probe label into ordered area names.
+
+    Splits on comma or slash, trims surrounding whitespace, drops empty fields, and
+    otherwise returns each label exactly as the NWB file wrote it. This resolves only
+    SEPARATION; which channels fall in which area is decided afterwards, by position
+    along the probe.
+
+    No vocabulary lives here, deliberately. Neither identity (is `DP` the same area as
+    `V4`?) nor spelling (is `v3a` the same area as `V3a`?) is a question generic
+    addressing can answer -- both depend on the recording convention of a particular
+    corpus, and a library that answered them would silently impose one project's
+    convention on every other. A project that knows its own convention normalizes before
+    or after calling this; jnwb does not normalize on its behalf.
+
+    Folding labels together here is also lossy in a way that is easy to miss: under a
+    project convention treating DP as an alias of V4, a "DP/V4" probe resolved to
+    ('V4', 'V4') -- both halves collapsing to one name, so a two-area probe stopped being
+    distinguishable by area at all.
+
+        >>> parse_probe_areas("V1, DP")
+        ('V1', 'DP')
+        >>> parse_probe_areas("DP/V4")
+        ('DP', 'V4')
+        >>> parse_probe_areas("V3A/V1")
+        ('V3A', 'V1')
+        >>> parse_probe_areas("v3d,V2")
+        ('v3d', 'V2')
+
+    Self-contained by design: jnwb must give identical scientific behaviour whether or not
+    any project package is importable, so nothing here may depend on one being installed.
+    """
+    return tuple(t for t in (p.strip() for p in re.split(r"[,/]", str(label))) if t)
+
+
 def map_peak_channel_to_area(peak_channel_id: float, electrodes_df: pd.DataFrame) -> Optional[str]:
     """
     Map peak channel ID to brain area location.
@@ -60,13 +95,7 @@ def map_peak_channel_to_area(peak_channel_id: float, electrodes_df: pd.DataFrame
                 # a real bug confirmed 2026-07-12: e.g. probe C channels
                 # 118-120 on a "V1, V2, V3" probe were all labeled 'V1' when
                 # the correct area for that channel range is 'V3'.
-                # Layering note: multi-area probe splitting uses omission project's
-                # custom convention if installed, or generic comma/slash parsing otherwise.
-                try:
-                    from omission.jnwb_ext.sequence_layout import parse_probe_areas
-                    areas = parse_probe_areas(loc_str)
-                except (ImportError, ModuleNotFoundError):
-                    areas = tuple(p.strip() for p in re.split(r"[,/]", loc_str) if p.strip())
+                areas = parse_probe_areas(loc_str)
 
                 if len(areas) <= 1:
                     return loc_str.split(',')[0].strip()

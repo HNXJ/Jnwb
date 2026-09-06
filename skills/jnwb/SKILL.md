@@ -1,13 +1,12 @@
 ---
 name: jnwb
-description: Top-level router and scientific safeguard kernel for jnwb NWB electrophysiology
-  analysis.
+description: Top-level router, scientific safeguard kernel, and memory bank for jnwb NWB electrophysiology analysis.
 ---
 
-# `jnwb` — Neuroscience & Electrophysiology Analysis Kernel
+# jnwb — Neuroscience & Electrophysiology Analysis Kernel
 
 ## 1. Trigger
-Activate this skill when the user asks for generic electrophysiology analysis, time-frequency analysis, spike dynamics, NWB processing, neural statistics, decoding, or directed connectivity.
+Activate this skill when the user asks for generic electrophysiology analysis, time-frequency analysis, spike dynamics, NWB processing, neural statistics, decoding, artifact rejection, or directed connectivity.
 
 ## 2. Task-to-Primitive Routing Matrix
 - **NWB inspection, paths, metadata, electrodes, addressing, compression**: delegate to `jnwb-nwb-data`
@@ -18,7 +17,12 @@ Activate this skill when the user asks for generic electrophysiology analysis, t
 - **Directional coupling (Granger, PSI, transfer entropy) with strict causal language**: delegate to `jnwb-connectivity`
 - **Visual QC, raster PSTH plotting, multi-format figure export**: delegate to `jnwb-figures`
 
-## 3. Core Scientific Safeguards & Invariants
+## 3. High-Performance Acceleration (CuPy & Joblib)
+- **GPU / CuPy Acceleration**: Operations supporting GPU execution accept `device='cuda'` (with automated fallback to CPU if unavailable). Use `backend='cupy'` for distance matrix speedups in `jrsa`.
+- **Parallel CPU Processing**: Batch shuffles, permutation testing, and pairwise channel matrices support `n_jobs: int = 1` (or `n_jobs=-1` for all CPU cores) using `joblib.Parallel`.
+- **Artifact Rejection & Repair**: Pre-filter LFP matrices using `bad_channels_from_correlation`, `consensus_bad_trials`, and `repair_lfp_trials`.
+
+## 4. Core Scientific Safeguards & Invariants
 1. **Signal Class Independence**: Spikes (SUA/MUA) and continuous LFP represent distinct physical observables. Never pool across modalities.
 2. **Estimand & Causal Hierarchy**: $\text{Association} \ne \text{Directionality} \ne \text{Causality}$. Granger causality and phase slope index measure temporal-lag asymmetry (predictive directionality), not anatomical/physical causality.
 3. **Logarithm Last**: For spectral power or decibel changes: average raw power across trials first, normalize by baseline, and compute $10 \cdot \log_{10}(\text{power})$ at the final step.
@@ -26,7 +30,12 @@ Activate this skill when the user asks for generic electrophysiology analysis, t
 5. **RNG Reproducibility**: Pass explicit `numpy.random.Generator` instances (e.g. `rng = np.random.default_rng(seed)`). Never mutate global `np.random.seed()`.
 6. **Dataset-Agnostic Invariant**: `jnwb` is dataset-agnostic. Experiment-specific condition codes and folder layouts belong in user analysis scripts, never in `jnwb`.
 
-## 4. Minimal Workflow
+## 5. Agent Memory & Operational Guidance
+For detailed workflow recipes, memory conventions, and common AI agent pitfalls, see:
+- [AGENTS.md](../../AGENTS.md) — Authoritative repository operational contract and PRGS execution grammar.
+- [docs/memory.md](../../docs/memory.md) — Comprehensive agent memory bank for end-to-end NWB workflows.
+
+## 6. Minimal Workflow
 ```python
 import jnwb
 import numpy as np
@@ -37,19 +46,8 @@ freqs = np.array([10.0, 20.0, 40.0])
 tfr = jnwb.complex_tfr(data, fs=1000.0, freqs=freqs)
 ```
 
-## 5. Verification
+## 7. Verification
 - All 101 exports resolve from `import jnwb`.
-- `sphinx-build -W` compiles docs warning-free.
+- `mkdocs build --strict` and `sphinx-build -W` compile docs warning-free.
+- `pytest tests/` passes 446+ tests.
 
-## 6. Canonical Documentation Links
-- [`docs/01_architecture_and_philosophy.md`](../../docs/01_architecture_and_philosophy.md)
-- [`docs/02_paths_addressing_metadata.md`](../../docs/02_paths_addressing_metadata.md)
-- [`docs/03_representational_similarity_jrsa.md`](../../docs/03_representational_similarity_jrsa.md)
-- [`docs/04_spectral_analysis_and_tfr.md`](../../docs/04_spectral_analysis_and_tfr.md)
-- [`docs/05_artifact_detection_and_repair.md`](../../docs/05_artifact_detection_and_repair.md)
-- [`docs/06_spikes_psth_and_onset_dynamics.md`](../../docs/06_spikes_psth_and_onset_dynamics.md)
-- [`docs/07_statistical_inference_and_nulls.md`](../../docs/07_statistical_inference_and_nulls.md)
-- [`docs/08_directed_connectivity_and_information.md`](../../docs/08_directed_connectivity_and_information.md)
-- [`docs/09_decoding_and_visual_qc.md`](../../docs/09_decoding_and_visual_qc.md)
-- [`docs/10_extending_jnwb_and_verification.md`](../../docs/10_extending_jnwb_and_verification.md)
-- [`docs/11_extending_and_development.md`](../../docs/11_extending_and_development.md)
