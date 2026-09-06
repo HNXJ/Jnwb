@@ -32,8 +32,8 @@ Paths are configured via environment variables rather than source code edits:
 |----------|----------------------|------------------|---------|
 | `nwb_dir` | `JNWB_NWB_DIR` / `OMISSION_NWB_DIR` | `None` (must be set) | Directory containing primary `.nwb` session files |
 | `analysis_dir` | `JNWB_ANALYSIS_DIR` / `OMISSION_ANALYSIS_DIR` | `None` (must be set) | Analysis root volume |
-| `outputs` | `JNWB_OUTPUTS_DIR` | `<repo_root>/outputs` | Processed tables, analysis summaries |
-| `artifacts` | `JNWB_ARTIFACTS_DIR` | `<repo_root>/artifacts`| Evidence logs, metadata sidecars |
+| `outputs` | `JNWB_OUTPUTS_DIR` / `OMISSION_OUTPUTS_DIR` | `<cwd>/outputs` | Processed tables, analysis summaries |
+| `artifacts` | `JNWB_ARTIFACTS_DIR` / `OMISSION_ARTIFACTS_DIR` | `<cwd>/artifacts` | Evidence logs, metadata sidecars |
 
 ---
 

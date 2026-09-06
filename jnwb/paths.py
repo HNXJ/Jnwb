@@ -1,27 +1,19 @@
 """Central path resolution for jnwb.
 
-Added 2026-08-08. Before this module, roots were hardcoded as absolute ``D:/...``
-literals in ``session.py``, ``viz.py``, ``report.py`` and ~27 scripts. A drive
-remap broke all of them at once, and the four literals that pointed at the repo's
-own ``outputs/`` through a drive letter (``D:/workspace/omission/outputs/...``)
-became permanently wrong once the repo moved to ``C:\\workspace\\omission`` --
-silently, because they were default arguments that resolve to a nonexistent path
-rather than raise.
-
 Two kinds of root, resolved differently:
 
-* **Repo-internal** (``REPO_ROOT``, :func:`outputs_dir`, :func:`artifacts_dir`) --
-  derived from this file's own location. Always correct, never configurable;
-  the repo cannot be anywhere other than where its own source is.
-* **External data** (:func:`nwb_dir`, :func:`analysis_dir`, and the
-  :func:`tfr_dir` / :func:`meta_dir` / :func:`conndb_dir` subtrees under it) -- lives on a separate volume that moves. Resolved from an
-  environment variable with a documented fallback. ``OMISSION_TFR_DIR`` and
-  ``OMISSION_META_DIR`` predate this module (``session.py`` and
-  ``build_session_readiness.py`` respectively) and are kept verbatim so existing
-  shells keep working.
+* **Working-directory outputs/artifacts** (:func:`outputs_dir`, :func:`artifacts_dir`):
+  Precedence: explicit ``override`` argument > ``$JNWB_OUTPUTS_DIR`` >
+  deprecated legacy ``$OMISSION_OUTPUTS_DIR`` > ``Path.cwd() / 'outputs'`` or ``'artifacts'``
+  (process working-directory default, independent of package installation location).
+* **External data roots** (:func:`nwb_dir`, :func:`analysis_dir`, and the
+  :func:`tfr_dir` / :func:`meta_dir` / :func:`conndb_dir` subtrees under it):
+  Precedence: explicit ``override`` > primary ``$JNWB_*`` environment variable >
+  deprecated legacy ``$OMISSION_*`` environment variable (with deprecation warning) >
+  ``None`` (raises FileNotFoundError explaining how to configure the path).
 
 :func:`describe` reports every root and whether it currently resolves -- run it
-first after any drive remap.
+first after any drive remap or environment configuration.
 
 Nothing here validates existence at import time. Callers that need a path to be
 present should use :func:`require`, which fails with the env var name to set
@@ -32,6 +24,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import warnings
 from pathlib import Path
 
 __all__ = [
@@ -41,6 +34,15 @@ __all__ = [
     "ENV_META_DIR",
     "ENV_CONNDB_DIR",
     "ENV_ANALYSIS_DIR",
+    "ENV_OUTPUTS_DIR",
+    "ENV_ARTIFACTS_DIR",
+    "LEGACY_ENV_NWB_DIR",
+    "LEGACY_ENV_TFR_DIR",
+    "LEGACY_ENV_META_DIR",
+    "LEGACY_ENV_CONNDB_DIR",
+    "LEGACY_ENV_ANALYSIS_DIR",
+    "LEGACY_ENV_OUTPUTS_DIR",
+    "LEGACY_ENV_ARTIFACTS_DIR",
     "DEFAULT_NWB_DIR",
     "DEFAULT_ANALYSIS_DIR",
     "TFR_SUBDIR",
@@ -60,24 +62,34 @@ __all__ = [
     "describe",
 ]
 
-# jnwb/paths.py -> jnwb/ -> repo root
+# jnwb/paths.py -> jnwb/ -> repo root (source tree)
 REPO_ROOT: Path = Path(__file__).resolve().parent.parent
 
-ENV_NWB_DIR = "OMISSION_NWB_DIR"
-ENV_TFR_DIR = "OMISSION_TFR_DIR"
-ENV_META_DIR = "OMISSION_META_DIR"
-ENV_CONNDB_DIR = "OMISSION_CONNDB_DIR"
-ENV_ANALYSIS_DIR = "OMISSION_ANALYSIS_DIR"
+# Primary generic environment variable names
+ENV_NWB_DIR = "JNWB_NWB_DIR"
+ENV_TFR_DIR = "JNWB_TFR_DIR"
+ENV_META_DIR = "JNWB_META_DIR"
+ENV_CONNDB_DIR = "JNWB_CONNDB_DIR"
+ENV_ANALYSIS_DIR = "JNWB_ANALYSIS_DIR"
+ENV_OUTPUTS_DIR = "JNWB_OUTPUTS_DIR"
+ENV_ARTIFACTS_DIR = "JNWB_ARTIFACTS_DIR"
+
+# Deprecated legacy environment variable aliases
+LEGACY_ENV_NWB_DIR = "OMISSION_NWB_DIR"
+LEGACY_ENV_TFR_DIR = "OMISSION_TFR_DIR"
+LEGACY_ENV_META_DIR = "OMISSION_META_DIR"
+LEGACY_ENV_CONNDB_DIR = "OMISSION_CONNDB_DIR"
+LEGACY_ENV_ANALYSIS_DIR = "OMISSION_ANALYSIS_DIR"
+LEGACY_ENV_OUTPUTS_DIR = "OMISSION_OUTPUTS_DIR"
+LEGACY_ENV_ARTIFACTS_DIR = "OMISSION_ARTIFACTS_DIR"
 
 #: No default data-volume layout. External data lives on a separate volume with a layout
-#: specific to each machine and project (e.g. this repo's own working copy previously pointed
-#: this at ``D:/nwb/omission`` and ``D:/analysis`` -- both a machine-specific drive letter and
-#: an omission-named path, neither appropriate as a jnwb-library-level default). ``None`` means
-#: :func:`nwb_dir` / :func:`analysis_dir` raise a clear, actionable error naming the env var to
-#: set, instead of silently resolving to a path that is wrong (or doesn't exist) on any other
-#: machine or project.
+#: specific to each machine and project. ``None`` means :func:`nwb_dir` / :func:`analysis_dir`
+#: raise a clear, actionable error naming the env var to set, instead of silently resolving
+#: to a path that is wrong (or doesn't exist) on any other machine or project.
 DEFAULT_NWB_DIR = None
 DEFAULT_ANALYSIS_DIR = None
+
 #: Derived-data subtrees. Resolved under :func:`analysis_dir` so that repointing the
 #: analysis volume moves all of them together.
 TFR_SUBDIR = "tfr_arrays"
@@ -85,16 +97,34 @@ META_SUBDIR = "metadata"
 CONNDB_SUBDIR = "connectivity_databases"
 
 
-def nwb_dir(override: str | os.PathLike | None = None) -> Path:
-    """Directory holding the ``sub-*_ses-*_rec.nwb`` session files.
+def _resolve_env(primary_var: str, legacy_var: str | None = None) -> str | None:
+    """Resolve an environment variable with explicit precedence and deprecation notice."""
+    val = os.environ.get(primary_var)
+    if val:
+        return val
+    if legacy_var:
+        legacy_val = os.environ.get(legacy_var)
+        if legacy_val:
+            warnings.warn(
+                f"Environment variable ${legacy_var} is deprecated and will be removed in a future release. "
+                f"Please migrate to ${primary_var}.",
+                DeprecationWarning,
+                stacklevel=3,
+            )
+            return legacy_val
+    return None
 
-    Precedence: explicit ``override`` > ``$OMISSION_NWB_DIR`` > :data:`DEFAULT_NWB_DIR` (``None``
-    by design -- there is no machine- or project-generic default data location). Raises
-    ``FileNotFoundError`` naming the env var when none of those resolve to a path.
+
+def nwb_dir(override: str | os.PathLike | None = None) -> Path:
+    """Directory holding the session NWB files.
+
+    Precedence: explicit ``override`` > ``$JNWB_NWB_DIR`` > ``$OMISSION_NWB_DIR`` (deprecated) >
+    :data:`DEFAULT_NWB_DIR` (``None`` by design -- there is no machine- or project-generic default).
+    Raises ``FileNotFoundError`` naming the env var when none of those resolve to a path.
     """
     if override is not None:
         return Path(override)
-    resolved = os.environ.get(ENV_NWB_DIR) or DEFAULT_NWB_DIR
+    resolved = _resolve_env(ENV_NWB_DIR, LEGACY_ENV_NWB_DIR) or DEFAULT_NWB_DIR
     if resolved is None:
         raise FileNotFoundError(
             f"No NWB directory configured. Pass override=, or set ${ENV_NWB_DIR}."
@@ -105,15 +135,14 @@ def nwb_dir(override: str | os.PathLike | None = None) -> Path:
 def analysis_dir(*parts: str, override: str | os.PathLike | None = None) -> Path:
     """Root of the derived-data volume: arrays, matrices, supplements, post-process output.
 
-    Everything the pipeline produces from NWBs lives under here, NOT in the repo.
-    Precedence: explicit ``override`` > ``$OMISSION_ANALYSIS_DIR`` > :data:`DEFAULT_ANALYSIS_DIR`
-    (``None`` by design -- there is no machine- or project-generic default data location).
+    Precedence: explicit ``override`` > ``$JNWB_ANALYSIS_DIR`` > ``$OMISSION_ANALYSIS_DIR`` (deprecated) >
+    :data:`DEFAULT_ANALYSIS_DIR` (``None`` by design).
     Raises ``FileNotFoundError`` naming the env var when none of those resolve to a path.
     """
     if override is not None:
         root = Path(override)
     else:
-        resolved = os.environ.get(ENV_ANALYSIS_DIR) or DEFAULT_ANALYSIS_DIR
+        resolved = _resolve_env(ENV_ANALYSIS_DIR, LEGACY_ENV_ANALYSIS_DIR) or DEFAULT_ANALYSIS_DIR
         if resolved is None:
             raise FileNotFoundError(
                 f"No analysis directory configured. Pass override=, or set ${ENV_ANALYSIS_DIR}."
@@ -125,52 +154,83 @@ def analysis_dir(*parts: str, override: str | os.PathLike | None = None) -> Path
 def tfr_dir(override: str | os.PathLike | None = None) -> Path:
     """Directory holding precomputed TFR arrays.
 
-    Precedence: explicit ``override`` > ``$OMISSION_TFR_DIR`` > ``<analysis_dir>/tfr_arrays``.
+    Precedence: explicit ``override`` > ``$JNWB_TFR_DIR`` > ``$OMISSION_TFR_DIR`` (deprecated) >
+    ``<analysis_dir>/tfr_arrays``.
     """
     if override is not None:
         return Path(override)
-    return Path(os.environ.get(ENV_TFR_DIR) or analysis_dir(TFR_SUBDIR))
+    env_path = _resolve_env(ENV_TFR_DIR, LEGACY_ENV_TFR_DIR)
+    if env_path:
+        return Path(env_path)
+    return Path(analysis_dir(TFR_SUBDIR))
 
 
 def meta_dir(override: str | os.PathLike | None = None) -> Path:
     """Directory holding session metadata sidecars (channel maps, layer exports).
 
-    Precedence: explicit ``override`` > ``$OMISSION_META_DIR`` > ``<analysis_dir>/metadata``.
+    Precedence: explicit ``override`` > ``$JNWB_META_DIR`` > ``$OMISSION_META_DIR`` (deprecated) >
+    ``<analysis_dir>/metadata``.
     """
     if override is not None:
         return Path(override)
-    return Path(os.environ.get(ENV_META_DIR) or analysis_dir(META_SUBDIR))
+    env_path = _resolve_env(ENV_META_DIR, LEGACY_ENV_META_DIR)
+    if env_path:
+        return Path(env_path)
+    return Path(analysis_dir(META_SUBDIR))
 
 
 def conndb_dir(override: str | os.PathLike | None = None) -> Path:
-    """Directory holding connectivity databases, incl. vFLIP2 ``*_channel_layers.csv``.
+    """Directory holding connectivity databases, incl. layer assignments.
 
-    Precedence: explicit ``override`` > ``$OMISSION_CONNDB_DIR`` > ``<analysis_dir>/connectivity_databases``.
+    Precedence: explicit ``override`` > ``$JNWB_CONNDB_DIR`` > ``$OMISSION_CONNDB_DIR`` (deprecated) >
+    ``<analysis_dir>/connectivity_databases``.
     """
     if override is not None:
         return Path(override)
-    return Path(os.environ.get(ENV_CONNDB_DIR) or analysis_dir(CONNDB_SUBDIR))
+    env_path = _resolve_env(ENV_CONNDB_DIR, LEGACY_ENV_CONNDB_DIR)
+    if env_path:
+        return Path(env_path)
+    return Path(analysis_dir(CONNDB_SUBDIR))
 
 
-def outputs_dir(*parts: str) -> Path:
-    """A path under the repo's ``outputs/`` tree. Always repo-relative."""
-    return REPO_ROOT.joinpath("outputs", *parts)
+def outputs_dir(*parts: str, override: str | os.PathLike | None = None) -> Path:
+    """Path under the designated outputs directory.
+
+    Precedence: explicit ``override`` > ``$JNWB_OUTPUTS_DIR`` >
+    ``$OMISSION_OUTPUTS_DIR`` (deprecated) > ``Path.cwd() / 'outputs'``
+    (process working-directory default, independent of package installation location).
+    """
+    if override is not None:
+        root = Path(override)
+    else:
+        resolved = _resolve_env(ENV_OUTPUTS_DIR, LEGACY_ENV_OUTPUTS_DIR)
+        root = Path(resolved) if resolved else Path.cwd() / "outputs"
+    return root.joinpath(*parts)
 
 
-def artifacts_dir(*parts: str) -> Path:
-    """A path under the repo's ``artifacts/`` tree. Always repo-relative."""
-    return REPO_ROOT.joinpath("artifacts", *parts)
+def artifacts_dir(*parts: str, override: str | os.PathLike | None = None) -> Path:
+    """Path under the designated artifacts directory.
+
+    Precedence: explicit ``override`` > ``$JNWB_ARTIFACTS_DIR`` >
+    ``$OMISSION_ARTIFACTS_DIR`` (deprecated) > ``Path.cwd() / 'artifacts'``
+    (process working-directory default, independent of package installation location).
+    """
+    if override is not None:
+        root = Path(override)
+    else:
+        resolved = _resolve_env(ENV_ARTIFACTS_DIR, LEGACY_ENV_ARTIFACTS_DIR)
+        root = Path(resolved) if resolved else Path.cwd() / "artifacts"
+    return root.joinpath(*parts)
 
 
 def layer_masks_path() -> Path:
-    """Canonical vFLIP layer-mask JSON. Repo-internal, so never configurable."""
+    """Canonical layer-mask JSON location under the outputs tree."""
     return outputs_dir("publication_visual_review", "area_layer_tfr", "layer_masks.json")
 
 
 def resolve_nwb_path(prefix: str, nwb_dir_override: str | os.PathLike | None = None) -> Path:
     """Resolve a session prefix to its NWB file, trying ``{prefix}_rec.nwb`` then
-    ``{prefix}.nwb``. Promoted 2026-08-14 from two identical copies in
-    ``decode_identity_sliding_window.py`` and ``decode_omission_onset_sliding_window.py``.
+    ``{prefix}.nwb``.
     Does not check existence beyond the ``_rec.nwb`` probe -- callers that need a hard
     guarantee should still check ``.exists()`` or use :func:`require`.
     """
@@ -182,11 +242,7 @@ def resolve_nwb_path(prefix: str, nwb_dir_override: str | os.PathLike | None = N
 
 
 def sha256_file(path: str | os.PathLike, chunk_size: int = 1024 * 1024) -> str:
-    """SHA-256 hex digest of a file, read in chunks (no full read into memory).
-
-    Promoted 2026-08-14 from ten near-identical ``_sha256`` helpers across the Handout 4 /
-    Structured Identity audit and materialize scripts.
-    """
+    """SHA-256 hex digest of a file, read in chunks (no full read into memory)."""
     h = hashlib.sha256()
     with open(path, "rb") as handle:
         for chunk in iter(lambda: handle.read(chunk_size), b""):
@@ -212,15 +268,13 @@ def require(path: str | os.PathLike, what: str, env_var: str | None = None) -> P
 def describe() -> dict:
     """Every root this module resolves, with whether it currently exists.
 
-    Diagnostic helper -- call after a drive remap to see what is reachable. Repo-internal roots
-    always resolve; the external-data roots (``nwb_dir``, ``tfr_dir``, ``meta_dir``,
-    ``analysis_dir``, ``conndb_dir``) have no built-in default and report ``configured: False``
-    when their env var is unset, rather than raising.
+    Diagnostic helper -- reports whether external-data roots (``nwb_dir``, ``tfr_dir``,
+    ``meta_dir``, ``analysis_dir``, ``conndb_dir``) and outputs/artifacts are configured.
     """
     result = {
         "REPO_ROOT": {"path": str(REPO_ROOT), "exists": REPO_ROOT.exists()},
-        "outputs": {"path": str(outputs_dir()), "exists": outputs_dir().exists()},
-        "artifacts": {"path": str(artifacts_dir()), "exists": artifacts_dir().exists()},
+        f"outputs (${ENV_OUTPUTS_DIR})": {"path": str(outputs_dir()), "exists": outputs_dir().exists()},
+        f"artifacts (${ENV_ARTIFACTS_DIR})": {"path": str(artifacts_dir()), "exists": artifacts_dir().exists()},
         "layer_masks": {"path": str(layer_masks_path()), "exists": layer_masks_path().exists()},
     }
     external_roots = {

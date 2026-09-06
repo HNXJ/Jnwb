@@ -710,24 +710,34 @@ def bin_spikes(
     output: str = "count",
     return_centers: bool = False,
 ):
-    """
-    Bridge spike data into the ``(n_trials, n_bins)`` contract used by every
-    estimator in this module.
+    r"""Bridge spike data into the ``(n_trials, n_bins)`` contract used by every estimator.
+
+    Temporal Axis Contract
+    ----------------------
+    - **Bins**: $K = \operatorname{round}((t_1 - t_0) / \Delta)$ intervals, where
+      $t_0, t_1 = \text{window}$ (seconds) and $\Delta = \text{bin\_size\_ms} / 1000$ (seconds).
+      Each bin $k \in \{0, \dots, K-1\}$ covers the right-open interval:
+      $$[t_k, t_{k+1}) = [t_0 + k\Delta,\; t_0 + (k+1)\Delta)$$
+    - **Boundary Exclusion**: Spikes strictly prior to $t_0$ ($t < t_0$) or at/beyond
+      the terminal boundary ($t \ge t_1$) are excluded. This enforces uniform right-open
+      semantics $[t_k, t_{k+1})$ across all bins, avoiding the default NumPy histogram
+      right-closed boundary artifact on the last bin.
+    - **Coordinates / Bin Centers**: When ``return_centers=True``, returns the bin centers
+      $c_k = t_0 + (k + 0.5)\Delta$ (seconds, aligned to the trial or window time origin).
 
     Args:
-        spike_times: either a 1-D array of absolute spike times (seconds), or a
-            list of per-trial 1-D arrays already expressed relative to ``window``
-        window: (start, end) in seconds. Relative to each trial start when
+        spike_times: 1-D array of absolute spike times (seconds) if ``trial_starts``
+            is provided; or a list/tuple of per-trial 1-D arrays relative to window.
+        window: ``(start, end)`` in seconds. Relative to trial start if
             ``trial_starts`` is given, else absolute.
-        bin_size_ms: bin width in ms
-        trial_starts: trial-aligned event times (seconds). Required to epoch a
-            single absolute spike train into trials.
-        output: ``'count'`` (spikes per bin) or ``'rate'`` (Hz)
-        return_centers: also return bin centers (seconds, relative to window start
-            convention of ``window``)
+        bin_size_ms: Bin width in milliseconds ($\Delta \times 1000$).
+        trial_starts: Optional trial-aligned event times (seconds) to epoch a single
+            continuous spike train into trials.
+        output: ``'count'`` (integer spike count per bin) or ``'rate'`` (spikes / sec = Hz).
+        return_centers: If True, also return 1-D array of bin center coordinates.
 
     Returns:
-        ``(n_trials, n_bins)`` array, or ``(array, centers)`` if ``return_centers``.
+        ``(n_trials, n_bins)`` float array, or ``(array, centers)`` if ``return_centers=True``.
     """
     if output not in ("count", "rate"):
         raise ValueError(f"output must be 'count' or 'rate'; got {output!r}")
@@ -756,7 +766,10 @@ def bin_spikes(
             trains = [np.asarray(s, dtype=float).ravel() for s in spike_times]
         else:
             trains = [np.asarray(spike_times, dtype=float).ravel()]
-        rows = [np.histogram(s, bins=edges)[0] for s in trains]
+        rows = []
+        for s in trains:
+            filtered = s[(s >= t0) & (s < t1)]
+            rows.append(np.histogram(filtered, bins=edges)[0])
 
     counts = np.asarray(rows, dtype=float)
     if counts.size == 0:

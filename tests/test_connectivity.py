@@ -117,6 +117,61 @@ class TestBinSpikes:
         counts = bin_spikes(spike_times, window=(0.0, 0.5), bin_size_ms=100.0)
         assert counts.shape == (2, 5)
 
+    def test_temporal_coordinates_and_bin_centers(self):
+        spike_times = [np.array([0.1, 0.25])]
+        counts, centers = bin_spikes(
+            spike_times, window=(0.0, 0.5), bin_size_ms=100.0, return_centers=True
+        )
+        assert counts.shape == (1, 5)
+        # Bins: [0, 0.1), [0.1, 0.2), [0.2, 0.3), [0.3, 0.4), [0.4, 0.5)
+        # Centers: 0.05, 0.15, 0.25, 0.35, 0.45
+        expected_centers = np.array([0.05, 0.15, 0.25, 0.35, 0.45])
+        np.testing.assert_allclose(centers, expected_centers, rtol=1e-12)
+
+    def test_right_open_boundary_contract(self):
+        # Window: [0.0, 0.3) with 100ms bins -> 3 bins: [0, 0.1), [0.1, 0.2), [0.2, 0.3)
+        # Spikes:
+        # -0.01: outside left (< t0) -> excluded
+        #  0.00: exactly on t0 -> bin 0
+        #  0.10: exactly on edge 1 -> bin 1 (not bin 0)
+        #  0.29: strictly inside bin 2 -> bin 2
+        #  0.30: exactly on t1 -> excluded (right-open boundary contract)
+        #  0.35: outside right (> t1) -> excluded
+        spikes = np.array([-0.01, 0.0, 0.10, 0.29, 0.30, 0.35])
+
+        # Test case 1: per-trial list
+        counts_list = bin_spikes([spikes], window=(0.0, 0.3), bin_size_ms=100.0)
+        np.testing.assert_array_equal(counts_list, [[1.0, 1.0, 1.0]])
+
+        # Test case 2: continuous spikes with trial_starts = [0.0]
+        counts_trial = bin_spikes(
+            spikes, window=(0.0, 0.3), bin_size_ms=100.0, trial_starts=[0.0]
+        )
+        np.testing.assert_array_equal(counts_trial, [[1.0, 1.0, 1.0]])
+
+        # Test case 3: continuous spikes with non-zero trial_start, interior points
+        interior_spikes = np.array([5.05, 5.15, 5.25])
+        counts_offset = bin_spikes(
+            interior_spikes, window=(0.0, 0.3), bin_size_ms=100.0, trial_starts=[5.0]
+        )
+        np.testing.assert_array_equal(counts_offset, [[1.0, 1.0, 1.0]])
+
+    def test_output_rate_scaling(self):
+        # 2 spikes in bin 0 (width = 0.05s = 50ms) -> rate = 2 / 0.05 = 40.0 Hz
+        spikes = [np.array([0.01, 0.02])]
+        rates = bin_spikes(spikes, window=(0.0, 0.2), bin_size_ms=50.0, output="rate")
+        assert rates.shape == (1, 4)
+        assert rates[0, 0] == pytest.approx(40.0)
+        assert rates[0, 1] == pytest.approx(0.0)
+
+    def test_input_validation(self):
+        with pytest.raises(ValueError, match="output must be 'count' or 'rate'"):
+            bin_spikes([np.array([0.1])], window=(0.0, 0.5), output="invalid")
+        with pytest.raises(ValueError, match="window must satisfy end > start"):
+            bin_spikes([np.array([0.1])], window=(0.5, 0.5))
+        with pytest.raises(ValueError, match="yields 1 bins; need >= 2"):
+            bin_spikes([np.array([0.1])], window=(0.0, 0.1), bin_size_ms=100.0)
+
 
 class TestGranger:
     def test_x_leads_y_gives_positive_net(self):
