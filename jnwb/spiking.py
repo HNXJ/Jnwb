@@ -83,12 +83,13 @@ def compute_response_metrics(
 
     for onset in epoch_onsets:
         # Searchsorted instead of masking: O(log N) instead of O(N)
+        # Bounded on right-open intervals [start, stop)
         b_lo = np.searchsorted(st, onset + baseline_start, side='left')
-        b_hi = np.searchsorted(st, onset + baseline_stop, side='right')
+        b_hi = np.searchsorted(st, onset + baseline_stop, side='left')
         baseline_count = b_hi - b_lo
 
         r_lo = np.searchsorted(st, onset + response_start, side='left')
-        r_hi = np.searchsorted(st, onset + response_stop, side='right')
+        r_hi = np.searchsorted(st, onset + response_stop, side='left')
         response_count = r_hi - r_lo
 
         baseline_spikes.append(baseline_count)

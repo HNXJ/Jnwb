@@ -64,7 +64,7 @@ def fires_in_window(spike_times: np.ndarray, onset_s: float, window_ms) -> bool:
     t1 = onset_s + window_ms[1] / 1000.0
     if t1 <= t0:
         return False
-    n = int(np.searchsorted(spike_times, t1, side="right") - np.searchsorted(spike_times, t0, side="left"))
+    n = int(np.searchsorted(spike_times, t1, side="left") - np.searchsorted(spike_times, t0, side="left"))
     return n > 0
 
 
@@ -179,7 +179,7 @@ def rate_in_window(spike_times: np.ndarray, onset_s: float, window_ms: Tuple[flo
     t1 = onset_s + window_ms[1] / 1000.0
     if t1 <= t0:
         return 0.0
-    n = int(np.searchsorted(spike_times, t1, side="right") - np.searchsorted(spike_times, t0, side="left"))
+    n = int(np.searchsorted(spike_times, t1, side="left") - np.searchsorted(spike_times, t0, side="left"))
     return n / ((window_ms[1] - window_ms[0]) / 1000.0)
 
 

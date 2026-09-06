@@ -91,6 +91,56 @@ def test_classify_layer_from_depth_threshold_boundary():
     assert classify_layer_from_depth(0, boundary_elec) == "Superficial"
 
 
+def test_map_peak_channel_to_area_with_explicit_channel_id_column_and_reset_index():
+    # Case where electrodes_df index is 0..N-1 (e.g. after reset_index) but channel identifiers
+    # live in a dedicated 'channel_id' column [100, 101, 102].
+    elec = pd.DataFrame(
+        {
+            "channel_id": [100, 101, 102],
+            "location": ["V1", "PFC", "FEF"],
+            "group_name": ["probeA", "probeA", "probeA"],
+            "z": [500.0, 1200.0, 1500.0],
+        },
+        index=[0, 1, 2],
+    )
+    # Must look up by channel_id, not row index
+    assert map_peak_channel_to_area(100, elec) == "V1"
+    assert map_peak_channel_to_area(101, elec) == "PFC"
+    assert map_peak_channel_to_area(102, elec) == "FEF"
+    # Row index 0 exists, but channel_id 0 does not -> must return None, NOT V1
+    assert map_peak_channel_to_area(0, elec) is None
+
+
+def test_classify_layer_from_depth_with_explicit_channel_id_column_and_reset_index():
+    elec = pd.DataFrame(
+        {
+            "channel_id": [100, 101, 102],
+            "z": [500.0, 1200.0, 1500.0],
+        },
+        index=[0, 1, 2],
+    )
+    assert classify_layer_from_depth(100, elec) == "Superficial"
+    assert classify_layer_from_depth(101, elec) == "Deep"
+    assert classify_layer_from_depth(0, elec) == "Unknown"
+
+
+def test_map_peak_channel_to_area_non_contiguous_probe_indices():
+    # Multi-area probe with non-contiguous channel indices (e.g. bad channels dropped)
+    elec = pd.DataFrame(
+        {
+            "location": ["V1, V2"] * 4,
+            "group_name": ["probeA"] * 4,
+        },
+        index=[10, 25, 50, 90],  # Non-contiguous, non-unit-step indices
+    )
+    # First half (channels 10, 25) -> V1
+    assert map_peak_channel_to_area(10, elec) == "V1"
+    assert map_peak_channel_to_area(25, elec) == "V1"
+    # Second half (channels 50, 90) -> V2
+    assert map_peak_channel_to_area(50, elec) == "V2"
+    assert map_peak_channel_to_area(90, elec) == "V2"
+
+
 def test_enrich_units_dataframe_maps_area_layer_and_stability():
     elec = _electrodes_df()
     units = pd.DataFrame(

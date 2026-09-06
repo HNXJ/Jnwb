@@ -475,16 +475,20 @@ def spectral_tilt(
     # Filter to range and remove DC
     mask = (frequencies > 0.5) & (frequencies >= freq_range[0]) & (frequencies <= freq_range[1])
     freqs = frequencies[mask]
-    pxx_db = 10 * np.log10(pxx[mask])
 
-    if len(freqs) < 2:
+    if len(freqs) < 2 or np.all(pxx[mask] <= 0):
         return result
 
+    valid = pxx[mask] > 0
+    if np.sum(valid) < 2:
+        return result
+
+    freqs = freqs[valid]
     # Fit 1/f slope on log-log scale
     # Power = Offset * f^exponent
     # log(Power) = log(Offset) + exponent * log(freq)
     log_freqs = np.log10(freqs)
-    log_power = np.log10(pxx[mask])
+    log_power = np.log10(pxx[mask][valid])
 
     # Linear regression
     coeffs = np.polyfit(log_freqs, log_power, 1)

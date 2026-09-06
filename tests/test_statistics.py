@@ -76,6 +76,54 @@ class TestFiresInWindow:
         spikes = np.array([1.0])
         assert fires_in_window(spikes, onset_s=1.0, window_ms=(100.0, 0.0)) is False
 
+    def test_exact_boundary_conditions_right_open(self):
+        # Window: [1.0, 1.1) in seconds
+        spikes_at_start = np.array([1.0])
+        spikes_at_end = np.array([1.1])
+        # Start boundary is INCLUDED
+        assert fires_in_window(spikes_at_start, onset_s=1.0, window_ms=(0.0, 100.0)) is True
+        # End boundary is EXCLUDED
+        assert fires_in_window(spikes_at_end, onset_s=1.0, window_ms=(0.0, 100.0)) is False
+
+    def test_adjacent_contiguous_windows_no_double_count(self):
+        # Two contiguous windows: [0, 100) and [100, 200) ms relative to onset 1.0
+        # A spike at 1.100 sits exactly on the boundary between window 1 and window 2
+        spikes = np.array([1.1])
+        in_w1 = fires_in_window(spikes, onset_s=1.0, window_ms=(0.0, 100.0))
+        in_w2 = fires_in_window(spikes, onset_s=1.0, window_ms=(100.0, 200.0))
+        assert in_w1 is False, "Boundary spike at upper edge of window 1 must be excluded"
+        assert in_w2 is True, "Boundary spike at lower edge of window 2 must be included"
+
+
+class TestRateInWindow:
+    def test_rate_computation(self):
+        # 2 spikes in 100ms window = 20 Hz
+        spikes = np.array([1.02, 1.08])
+        rate = rate_in_window(spikes, onset_s=1.0, window_ms=(0.0, 100.0))
+        assert rate == pytest.approx(20.0)
+
+    def test_exact_boundary_conditions_right_open(self):
+        # Spike at start boundary is included, spike at end boundary is excluded
+        spikes = np.array([1.0, 1.1])  # one at 1.0, one at 1.1
+        # Window [1.0, 1.1): only the spike at 1.0 is counted (1 spike in 0.1s = 10 Hz)
+        rate = rate_in_window(spikes, onset_s=1.0, window_ms=(0.0, 100.0))
+        assert rate == pytest.approx(10.0)
+
+    def test_adjacent_contiguous_windows_conservation(self):
+        # Spikes at 1.0, 1.1, 1.15
+        spikes = np.array([1.0, 1.1, 1.15])
+        rate_w1 = rate_in_window(spikes, onset_s=1.0, window_ms=(0.0, 100.0))  # [1.0, 1.1) -> 1 spike = 10 Hz
+        rate_w2 = rate_in_window(spikes, onset_s=1.0, window_ms=(100.0, 200.0))  # [1.1, 1.2) -> 2 spikes = 20 Hz
+        rate_total = rate_in_window(spikes, onset_s=1.0, window_ms=(0.0, 200.0))  # [1.0, 1.2) -> 3 spikes = 15 Hz
+        assert rate_w1 == pytest.approx(10.0)
+        assert rate_w2 == pytest.approx(20.0)
+        assert rate_total == pytest.approx(15.0)
+
+    def test_empty_or_reversed_window_returns_zero(self):
+        spikes = np.array([1.05])
+        assert rate_in_window(spikes, onset_s=1.0, window_ms=(100.0, 0.0)) == 0.0
+        assert rate_in_window(np.array([]), onset_s=1.0, window_ms=(0.0, 100.0)) == 0.0
+
 
 class TestFireIndicator:
     def test_one_entry_per_onset(self):
@@ -121,15 +169,6 @@ class TestPairedFireProbTest:
                     "odds_ratio_ci_lo", "odds_ratio_ci_hi", "p_value_fire_shuffle", "n_trials"):
             assert key in result
 
-
-class TestRateInWindow:
-    def test_counts_spikes_in_window_as_rate(self):
-        spikes = np.array([1.05, 1.10, 1.20])
-        rate = rate_in_window(spikes, onset_s=1.0, window_ms=(0.0, 200.0))
-        assert rate == pytest.approx(3.0 / 0.2)
-
-    def test_empty_or_reversed_window_returns_zero(self):
-        assert rate_in_window(np.array([1.0]), onset_s=1.0, window_ms=(100.0, 0.0)) == 0.0
 
 
 class TestShufflePvaluePaired:

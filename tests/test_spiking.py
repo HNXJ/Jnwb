@@ -51,6 +51,20 @@ class TestComputeResponseMetrics:
         assert metrics["response_rate"] == pytest.approx(4 / 0.15)
         assert metrics["response_count"] == 12
 
+    def test_exact_boundary_conditions_right_open(self):
+        # Onset at 0.0. Contiguous windows: baseline [-0.2, 0.0), response [0.0, 0.2)
+        onsets = np.array([0.0])
+        # Spike exactly at -0.2 (baseline_start) -> included in baseline
+        # Spike exactly at 0.0 (baseline_stop / response_start) -> included in response, excluded from baseline
+        # Spike exactly at 0.2 (response_stop) -> excluded from response
+        spikes = np.array([-0.2, 0.0, 0.2])
+        metrics = compute_response_metrics(
+            spikes, onsets, baseline_window=(-0.2, 0.0), response_window=(0.0, 0.2)
+        )
+        assert metrics["baseline_rate"] == pytest.approx(1 / 0.2)  # exactly 1 spike at -0.2
+        assert metrics["response_rate"] == pytest.approx(1 / 0.2)  # exactly 1 spike at 0.0
+        assert metrics["response_count"] == 1  # only spike at 0.0, spike at 0.2 is excluded
+
 
 class TestClassifyResponseSignificance:
     def test_below_min_spike_count_is_low_confidence(self):

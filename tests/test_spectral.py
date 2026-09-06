@@ -135,6 +135,26 @@ class TestSpectralTilt:
         result = spectral_tilt(pink, sampling_rate=1000.0, freq_range=(1.0, 100.0))
         assert result["exponent"] < 0
 
+    def test_flat_zero_signal_returns_clean_finite_result_without_warning(self):
+        # Degenerate input: all-zero LFP trace must not throw RuntimeWarning or return NaNs
+        import warnings
+        with warnings.catch_warnings(record=True) as record:
+            warnings.simplefilter("always")
+            result = spectral_tilt(np.zeros(1000), sampling_rate=1000.0)
+            assert len(record) == 0, f"Expected zero warnings, got: {[r.message for r in record]}"
+        assert result["exponent"] == 0.0
+        assert result["offset"] == 0.0
+        assert result["fit_quality"] == 0.0
+        assert np.isfinite(result["exponent"])
+        assert np.isfinite(result["offset"])
+        assert np.isfinite(result["fit_quality"])
+
+    def test_constant_signal_returns_clean_finite_result(self):
+        result = spectral_tilt(np.full(1000, 5.0), sampling_rate=1000.0)
+        assert result["exponent"] == 0.0
+        assert result["offset"] == 0.0
+        assert result["fit_quality"] == 0.0
+
 
 class TestBandPower:
     def test_empty_input_returns_zero(self):
