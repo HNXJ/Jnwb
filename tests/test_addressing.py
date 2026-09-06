@@ -155,10 +155,25 @@ def _area_map_in_subprocess(block_omission: bool) -> str:
     """Resolve one multi-area channel in a fresh interpreter, optionally with omission hidden."""
     lines = ["import sys"]
     if block_omission:
+        # Poisoning sys.modules is the whole block, and it is the only one that works:
+        # omission is installed as an editable package, so a finder registered at
+        # interpreter startup resolves it no matter what sys.path holds. A sentinel of
+        # None makes ``import omission`` raise ModuleNotFoundError regardless of route.
+        #
+        # This used to additionally strip every sys.path entry whose text contained
+        # "omission" or "workspace". That deleted the virtualenv's site-packages whenever
+        # the checkout lived under a path containing "workspace" -- as this one does -- so
+        # the subprocess died on ``import pandas`` and the test asserted nothing about
+        # addressing at all.
         lines += [
-            "sys.path = [p for p in sys.path"
-            " if 'omission' not in p.lower() and 'workspace' not in p.lower()]",
             "sys.modules['omission'] = None",
+            # Prove the block took effect. Without this the test can silently decay into
+            # a no-op that compares jnwb against itself.
+            "try:",
+            "    import omission",
+            "    raise SystemExit('omission is still importable; the block failed')",
+            "except ImportError:",
+            "    pass",
         ]
     lines += [
         "import pandas as pd, jnwb",

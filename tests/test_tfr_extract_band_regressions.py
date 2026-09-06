@@ -9,6 +9,10 @@ Verifies:
   - Single-source band consolidation onto spectral.CANONICAL_BANDS (F2 fix)
   - Preservation of explicit legacy 7-band table (LEGACY_VIZ_BANDS)
   - TFRAnalyzer.correlate_areas with explicit freqs
+
+The omission-side wrapper test that used to live here moved to
+omission/tests/test_functions_coverage.py on 2026-09-04: the jnwb suite must not
+import a project package.
 """
 from __future__ import annotations
 
@@ -147,24 +151,6 @@ class TestTFRExtractBandRegressions:
         freqs = np.linspace(1.0, 40.0, 20)
         
         res = TFRAnalyzer.correlate_areas(tfr1, tfr2, freqs=freqs, band="alpha")
-        assert "correlation" in res
-        assert "band" in res
-        assert res["band"] == "alpha"
-
-    def test_omission_wrapper_tfr_correlate_areas_migrated(self):
-        """Verify omission.jnwb_ext.functions.tfr_correlate_areas wrapper passes explicit freqs."""
-        from unittest.mock import MagicMock
-        from omission.jnwb_ext.functions import tfr_correlate_areas
-
-        mock_session = MagicMock()
-        # Mock 99-bin TFR array: (trials=5, channels=4, freqs=99, times=20)
-        fake_tfr1 = np.random.randn(5, 4, 99, 20)
-        fake_tfr2 = np.random.randn(5, 4, 99, 20)
-        mock_session.tfr_from_preprocessed.side_effect = lambda area, band, condition: (
-            fake_tfr1 if area == "V1" else fake_tfr2
-        )
-
-        res = tfr_correlate_areas(mock_session, area1="V1", area2="V4", band="alpha")
         assert "correlation" in res
         assert "band" in res
         assert res["band"] == "alpha"

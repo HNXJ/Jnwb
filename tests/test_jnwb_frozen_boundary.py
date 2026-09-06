@@ -16,6 +16,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 JNWB_DIR = REPO_ROOT / "jnwb"
+TESTS_DIR = REPO_ROOT / "tests"
 
 # (path relative to jnwb/, fully-qualified module imported) -- the ONLY omission-side imports
 # jnwb/ may contain, and only as lazy, function-body-local imports. Any other omission import
@@ -82,6 +83,29 @@ class TestJnwbFrozenBoundary:
         assert not violations, (
             "An authorized omission/ import is no longer lazy -- this breaks the guarantee that "
             "jnwb/ is importable without omission/ present:\n" + "\n".join(violations)
+        )
+
+    def test_jnwb_test_suite_does_not_import_omission(self):
+        """The suite that guards the freeze must itself run without omission/ present.
+
+        omission/ is untracked (2026-09-03), so a CI checkout contains only jnwb. A single
+        `from omission... import ...` in tests/ therefore turns `pytest tests/` red on every
+        run while still passing on any developer machine that has omission checked out --
+        which is exactly what happened between 2026-09-03 and 2026-09-04. Project-side tests
+        belong in omission/tests/.
+        """
+        violations = []
+        for f in TESTS_DIR.rglob("*.py"):
+            if "__pycache__" in f.parts:
+                continue
+            tree = ast.parse(f.read_text(encoding="utf-8"), filename=str(f))
+            for lineno, modname, _ in _omission_imports(tree):
+                violations.append(f"tests/{f.relative_to(TESTS_DIR).as_posix()}:{lineno} "
+                                  f"imports {modname!r}")
+        assert not violations, (
+            "The jnwb test suite imports a project package, so it cannot run on a checkout "
+            "that has only jnwb (i.e. CI). Move these tests into omission/tests/:\n"
+            + "\n".join(violations)
         )
 
     def test_jnwb_importable_without_omission_on_sys_path(self):

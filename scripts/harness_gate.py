@@ -161,11 +161,11 @@ def check_no_hardcoded_test_paths(repo_root: Optional[Path] = None) -> List[str]
 ALLOWED_ROOT_DIRS = {
     "jnwb", "tests", "examples", "docs", "skills", "scripts", "omission", "artifacts",
     ".git", ".github", ".venv", "venv", "env", ".pytest_cache", "dist", "build", "jnwb.egg-info",
-    ".lab_bundle_build", ".claude", ".cursor", ".gemini", "_build", ".tox"
+    ".lab_bundle_build", ".claude", ".cursor", ".gemini", "_build", ".tox", "site"
 }
 ALLOWED_ROOT_FILES = {
     ".gitignore", ".readthedocs.yaml", "AGENTS.md", "CHANGELOG.md", "CLAUDE.md",
-    "LICENSE", "pyproject.toml", "README.md", ".coverage"
+    "LICENSE", "pyproject.toml", "README.md", ".coverage", "mkdocs.yml"
 }
 
 

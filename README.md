@@ -126,9 +126,19 @@ print(f"TFR shape: {tfr.shape}, Beta band power: {beta_power:.4f}")
 
 ---
 
+## AI Agent & Automated Harness Guidance
+
+When deploying autonomous AI coding agents or automated research harnesses to analyze electrophysiology data with `jnwb`, refer to:
+
+- **[`AGENTS.md`](AGENTS.md)**: The authoritative repository operational contract, epistemic discipline, truth precedence hierarchy, and PRGS operational loop.
+- **[`skills/`](skills/)**: The 8 canonical domain skills routing tasks to `jnwb` primitives (`jnwb-nwb-data`, `jnwb-spiking`, `jnwb-lfp-spectral`, `jnwb-statistics`, `jnwb-population`, `jnwb-connectivity`, `jnwb-figures`).
+- **[`docs/memory.md`](docs/memory.md)**: The persistent agent memory bank with end-to-end recipes for NWB addressing, artifact detection and repair, GPU/CuPy acceleration, parallel execution (`joblib`), and publication-grade vector visualizations.
+
+---
+
 ## Documentation
 
-Full tutorials, 11 scientific topic guides, API reference, and developer invariants are available on [Read the Docs](https://jnwb.readthedocs.io/).
+Twelve topic guides (architecture and philosophy through interactive analyses), a complete API reference covering all 101 exported symbols, and the developer invariants are available on [Read the Docs](https://jnwb.readthedocs.io/).
 
 ## License
 

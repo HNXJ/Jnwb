@@ -18,6 +18,8 @@ dist/
 .lab_bundle_build/
 _build/
 docs/_build/
+site/
+
 
 # data / derived / generated (not source)
 # omission project (local only, untracked on remote)
@@ -61,6 +63,9 @@ gallery_src/
 *.png
 !examples/figures/jnwb_quickstart.png
 !examples/figures/jnwb_quickstart.svg
+!docs/assets/*.png
+!docs/assets/*.svg
+
 *.jpg
 *.jpeg
 *.h5py
