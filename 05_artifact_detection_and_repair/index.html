@@ -10,29 +10,31 @@
       
       
       
-        <link rel="canonical" href="https://jnwb.readthedocs.io/">
+        <link rel="canonical" href="https://jnwb.readthedocs.io/05_artifact_detection_and_repair/">
       
       
+        <link rel="prev" href="../04_spectral_analysis_and_tfr/">
       
-        <link rel="next" href="install/">
+      
+        <link rel="next" href="../06_spikes_psth_and_onset_dynamics/">
       
       
         
       
       
-      <link rel="icon" href="assets/favicon.png">
+      <link rel="icon" href="../assets/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
-        <title>Welcome - jnwb</title>
+        <title>Artifact Detection & Repair - jnwb</title>
       
     
     
-      <link rel="stylesheet" href="assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
       
         
-        <link rel="stylesheet" href="assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -51,9 +53,9 @@
       
     
     
-      <link rel="stylesheet" href="_theme_override.css">
+      <link rel="stylesheet" href="../_theme_override.css">
     
-    <script>__md_scope=new URL(".",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -78,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#jnwb" class="md-skip">
+        <a href="#05-artifact-detection-signal-repair" class="md-skip">
           Skip to content
         </a>
       
@@ -94,9 +96,9 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="." title="jnwb" class="md-header__button md-logo" aria-label="jnwb" data-md-component="logo">
+    <a href=".." title="jnwb" class="md-header__button md-logo" aria-label="jnwb" data-md-component="logo">
       
-  <img src="assets/jnwb-logo.png" alt="logo">
+  <img src="../assets/jnwb-logo.png" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -113,7 +115,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Welcome
+              Artifact Detection & Repair
             
           </span>
         </div>
@@ -217,9 +219,9 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="." title="jnwb" class="md-nav__button md-logo" aria-label="jnwb" data-md-component="logo">
+    <a href=".." title="jnwb" class="md-nav__button md-logo" aria-label="jnwb" data-md-component="logo">
       
-  <img src="assets/jnwb-logo.png" alt="logo">
+  <img src="../assets/jnwb-logo.png" alt="logo">
 
     </a>
     jnwb
@@ -243,8 +245,6 @@
       
   
   
-    
-  
   
   
     
@@ -271,15 +271,15 @@
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1" >
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="." class="md-nav__link md-nav__link--active">
+            <a href=".." class="md-nav__link ">
               
   
   
@@ -297,13 +297,13 @@
             </a>
             
               
-              <label class="md-nav__link md-nav__link--active" for="__nav_1" id="__nav_1_label" tabindex="">
+              <label class="md-nav__link " for="__nav_1" id="__nav_1_label" tabindex="">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
           </div>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_1_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_1_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_1">
             <span class="md-nav__icon md-icon"></span>
             
@@ -323,7 +323,7 @@
   
   
     <li class="md-nav__item">
-      <a href="install/" class="md-nav__link">
+      <a href="../install/" class="md-nav__link">
         
   
   
@@ -351,7 +351,7 @@
   
   
     <li class="md-nav__item">
-      <a href="quickstart/" class="md-nav__link">
+      <a href="../quickstart/" class="md-nav__link">
         
   
   
@@ -379,7 +379,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/" class="md-nav__link">
+      <a href="../api/" class="md-nav__link">
         
   
   
@@ -407,7 +407,7 @@
   
   
     <li class="md-nav__item">
-      <a href="memory/" class="md-nav__link">
+      <a href="../memory/" class="md-nav__link">
         
   
   
@@ -504,7 +504,7 @@
   
   
     <li class="md-nav__item">
-      <a href="01_architecture_and_philosophy/" class="md-nav__link">
+      <a href="../01_architecture_and_philosophy/" class="md-nav__link">
         
   
   
@@ -532,7 +532,7 @@
   
   
     <li class="md-nav__item">
-      <a href="02_paths_addressing_metadata/" class="md-nav__link">
+      <a href="../02_paths_addressing_metadata/" class="md-nav__link">
         
   
   
@@ -560,7 +560,7 @@
   
   
     <li class="md-nav__item">
-      <a href="03_representational_similarity_jrsa/" class="md-nav__link">
+      <a href="../03_representational_similarity_jrsa/" class="md-nav__link">
         
   
   
@@ -588,7 +588,7 @@
   
   
     <li class="md-nav__item">
-      <a href="04_spectral_analysis_and_tfr/" class="md-nav__link">
+      <a href="../04_spectral_analysis_and_tfr/" class="md-nav__link">
         
   
   
@@ -620,8 +620,10 @@
       
   
   
+    
   
   
+  
     
     
       
@@ -644,11 +646,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
           <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
@@ -669,7 +671,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -684,10 +686,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="05_artifact_detection_and_repair/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Artifact Detection & Repair
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -703,6 +732,137 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-overview-repair-strategy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Overview &amp; Repair Strategy
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-artifact-detection-primitives-jnwbartifact_detection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Artifact Detection Primitives (jnwb.artifact_detection)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Artifact Detection Primitives (jnwb.artifact_detection)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#channel-correlation-matrix-bad-channel-rejection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Channel Correlation Matrix &amp; Bad Channel Rejection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#trial-correlation-matrix-single-channel-bad-trials" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Trial Correlation Matrix &amp; Single-Channel Bad Trials
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#consensus-bad-trials-across-channels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consensus Bad Trials Across Channels
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-high-level-trial-repair-pipelines-jnwbartifact_repair" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. High-Level Trial Repair Pipelines (jnwb.artifact_repair)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. High-Level Trial Repair Pipelines (jnwb.artifact_repair)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#repair_lfp_trials" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        repair_lfp_trials
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#repair_band_artifacts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        repair_band_artifacts
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-api-reference-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. API Reference Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -715,7 +875,7 @@
   
   
     <li class="md-nav__item">
-      <a href="06_spikes_psth_and_onset_dynamics/" class="md-nav__link">
+      <a href="../06_spikes_psth_and_onset_dynamics/" class="md-nav__link">
         
   
   
@@ -743,7 +903,7 @@
   
   
     <li class="md-nav__item">
-      <a href="07_statistical_inference_and_nulls/" class="md-nav__link">
+      <a href="../07_statistical_inference_and_nulls/" class="md-nav__link">
         
   
   
@@ -771,7 +931,7 @@
   
   
     <li class="md-nav__item">
-      <a href="08_directed_connectivity_and_information/" class="md-nav__link">
+      <a href="../08_directed_connectivity_and_information/" class="md-nav__link">
         
   
   
@@ -799,7 +959,7 @@
   
   
     <li class="md-nav__item">
-      <a href="09_decoding_and_visual_qc/" class="md-nav__link">
+      <a href="../09_decoding_and_visual_qc/" class="md-nav__link">
         
   
   
@@ -894,7 +1054,7 @@
   
   
     <li class="md-nav__item">
-      <a href="12_interactive_analyses/" class="md-nav__link">
+      <a href="../12_interactive_analyses/" class="md-nav__link">
         
   
   
@@ -922,7 +1082,7 @@
   
   
     <li class="md-nav__item">
-      <a href="10_extending_jnwb_and_verification/" class="md-nav__link">
+      <a href="../10_extending_jnwb_and_verification/" class="md-nav__link">
         
   
   
@@ -950,7 +1110,7 @@
   
   
     <li class="md-nav__item">
-      <a href="11_extending_and_development/" class="md-nav__link">
+      <a href="../11_extending_and_development/" class="md-nav__link">
         
   
   
@@ -1041,7 +1201,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/" class="md-nav__link">
+      <a href="../api/" class="md-nav__link">
         
   
   
@@ -1096,10 +1256,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#install" class="md-nav__link">
+  <a href="#1-overview-repair-strategy" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Install
+        1. Overview &amp; Repair Strategy
       
     </span>
   </a>
@@ -1107,32 +1267,99 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#minimal-example" class="md-nav__link">
+  <a href="#2-artifact-detection-primitives-jnwbartifact_detection" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Minimal Example
+        2. Artifact Detection Primitives (jnwb.artifact_detection)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Artifact Detection Primitives (jnwb.artifact_detection)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#channel-correlation-matrix-bad-channel-rejection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Channel Correlation Matrix &amp; Bad Channel Rejection
       
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#main-pages" class="md-nav__link">
+        
+          <li class="md-nav__item">
+  <a href="#trial-correlation-matrix-single-channel-bad-trials" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Main Pages
+        Trial Correlation Matrix &amp; Single-Channel Bad Trials
       
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#canonical-six-panel-visual-architecture" class="md-nav__link">
+        
+          <li class="md-nav__item">
+  <a href="#consensus-bad-trials-across-channels" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Canonical Six-Panel Visual Architecture
+        Consensus Bad Trials Across Channels
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-high-level-trial-repair-pipelines-jnwbartifact_repair" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. High-Level Trial Repair Pipelines (jnwb.artifact_repair)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. High-Level Trial Repair Pipelines (jnwb.artifact_repair)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#repair_lfp_trials" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        repair_lfp_trials
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#repair_band_artifacts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        repair_band_artifacts
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-api-reference-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. API Reference Summary
       
     </span>
   </a>
@@ -1159,100 +1386,137 @@
   
 
 
-<h1 id="jnwb">jnwb<a class="headerlink" href="#jnwb" title="Permanent link">&para;</a></h1>
-<p><strong>Dataset-Agnostic Electrophysiology &amp; Time-Frequency Analysis</strong> — High-performance Python library for Neurodata Without Borders (NWB 2.0+) electrophysiology recordings, spectral transformations, spiking onset dynamics, and statistical inference.</p>
-<p><strong>Scientific grammar:</strong> Raw NWB / Arrays → Addressing &amp; QC → Signal &amp; Spectral → Dynamics &amp; Spikes → Statistical Nulls → Directionality &amp; RSA</p>
-<p><strong>Execution grammar:</strong> <code>Query / Addressing</code> → <code>Extraction</code> → <code>Preprocessing / Repair</code> → <code>Estimator</code> → <code>Permutation / Bootstrap</code> → <code>Figure / Verification</code></p>
-<p>All algorithms are mathematically bounded, dataset-agnostic, and guaranteed to operate without condition leakage or hardcoded experiment heuristics.</p>
-<p><a href="01_architecture_and_philosophy/">Scope &amp; status</a> · <a href="api/">Public API contract</a> (101 symbols) · <a href="memory/">Agent Guidance</a></p>
+<h1 id="05-artifact-detection-signal-repair">05. Artifact Detection &amp; Signal Repair<a class="headerlink" href="#05-artifact-detection-signal-repair" title="Permanent link">&para;</a></h1>
+<p>This document details the public artifact detection and repair algorithms in <code>jnwb</code>, designed for high-density multi-channel electrophysiology and trial-segmented LFP/TFR data.</p>
 <hr />
-<h2 id="install">Install<a class="headerlink" href="#install" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>-U<span class="w"> </span>jnwb
-pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;jnwb[torch,gpu]&quot;</span><span class="w">   </span><span class="c1"># optional CuPy / PyTorch GPU acceleration</span>
+<h2 id="1-overview-repair-strategy">1. Overview &amp; Repair Strategy<a class="headerlink" href="#1-overview-repair-strategy" title="Permanent link">&para;</a></h2>
+<p>High-channel-count probes (e.g. Neuropixels, multi-shank arrays) suffer from distinct artifact modalities:
+1. <strong>Electrode Pop &amp; Drift</strong>: Single bad channels showing near-zero correlation or massive amplitude spikes.
+2. <strong>Chewing / Movement / Optical Transients</strong>: Synchronous, high-amplitude excursions spanning many or all channels simultaneously on specific trials.</p>
+<p><code>jnwb</code> provides a two-stage strategy:
+- <strong>Detection (<code>jnwb.artifact_detection</code>)</strong>: Statistical identification of bad channels and trials via cross-correlation and amplitude z-scores.
+- <strong>Repair (<code>jnwb.artifact_repair</code>)</strong>: Substitution of artifact-corrupted samples with cross-trial medians to preserve array geometry without discarding entire trials.</p>
+<div class="highlight"><pre><span></span><code>graph TD
+    Raw[Raw Segmented LFP: N_trials x N_channels x N_times] --&gt; Detect[Cross-Channel Synchrony &amp; Amplitude Z-Score]
+    Detect --&gt; Mask[Artifact Boolean Mask]
+    Mask --&gt; Repair[Cross-Trial Median Substitution]
+    Repair --&gt; Clean[Repaired LFP Tensor + Diagnostics]
 </code></pre></div>
-<h2 id="minimal-example">Minimal Example<a class="headerlink" href="#minimal-example" title="Permanent link">&para;</a></h2>
-<p>Compute time-frequency representation (TFR) and band power on continuous electrophysiology:</p>
+<hr />
+<h2 id="2-artifact-detection-primitives-jnwbartifact_detection">2. Artifact Detection Primitives (<code>jnwb.artifact_detection</code>)<a class="headerlink" href="#2-artifact-detection-primitives-jnwbartifact_detection" title="Permanent link">&para;</a></h2>
+<p>All 5 core artifact detection functions are exposed directly in the top-level <code>jnwb</code> namespace:</p>
+<h3 id="channel-correlation-matrix-bad-channel-rejection">Channel Correlation Matrix &amp; Bad Channel Rejection<a class="headerlink" href="#channel-correlation-matrix-bad-channel-rejection" title="Permanent link">&para;</a></h3>
+<p>Computes the inter-channel correlation matrix and identifies disconnected or noisy electrodes via median correlation z-scores:</p>
 <div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">jnwb</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 
-<span class="c1"># Generate a synthetic neural signal with a 20 Hz oscillation</span>
-<span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-<span class="n">fs</span> <span class="o">=</span> <span class="mf">1000.0</span>
-<span class="n">time</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1000</span><span class="p">)</span> <span class="o">/</span> <span class="n">fs</span>
-<span class="n">signal</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="mf">20.0</span> <span class="o">*</span> <span class="n">time</span><span class="p">)</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">rng</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
+<span class="c1"># data: (n_channels, n_timepoints)</span>
+<span class="n">corr</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">channel_correlation_matrix</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
 
-<span class="c1"># Compute multitaper / Welch power spectral density</span>
-<span class="n">freqs</span><span class="p">,</span> <span class="n">psd</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">compute_psd</span><span class="p">(</span><span class="n">signal</span><span class="p">,</span> <span class="n">fs</span><span class="o">=</span><span class="n">fs</span><span class="p">)</span>
-
-<span class="c1"># Extract band power in the beta range (14-30 Hz)</span>
-<span class="n">beta_power</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">band_power</span><span class="p">(</span><span class="n">signal</span><span class="p">,</span> <span class="n">sampling_rate</span><span class="o">=</span><span class="n">fs</span><span class="p">,</span> <span class="n">freq_range</span><span class="o">=</span><span class="p">(</span><span class="mf">14.0</span><span class="p">,</span> <span class="mf">30.0</span><span class="p">))</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Beta band power: </span><span class="si">{</span><span class="n">beta_power</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="c1"># Flag channels whose median correlation is z_thresh standard deviations below population mean</span>
+<span class="n">bad_chan_mask</span><span class="p">,</span> <span class="n">mean_corrs</span><span class="p">,</span> <span class="n">z_scores</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">bad_channels_from_correlation</span><span class="p">(</span><span class="n">corr</span><span class="p">,</span> <span class="n">z_thresh</span><span class="o">=</span><span class="mf">2.5</span><span class="p">)</span>
 </code></pre></div>
-<blockquote>
-<p><strong>Dataset Independence Invariant:</strong> <code>jnwb</code> contains zero hardcoded experiment condition names, session IDs, or manuscript findings. All analysis logic accepts generic numeric arrays or standardized NWB data containers.</p>
-</blockquote>
+<h3 id="trial-correlation-matrix-single-channel-bad-trials">Trial Correlation Matrix &amp; Single-Channel Bad Trials<a class="headerlink" href="#trial-correlation-matrix-single-channel-bad-trials" title="Permanent link">&para;</a></h3>
+<p>Identifies corrupted trials within an individual channel:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># trials_data: (n_trials, n_timepoints)</span>
+<span class="n">trial_corr</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">trial_correlation_matrix</span><span class="p">(</span><span class="n">trials_data</span><span class="p">)</span>
+
+<span class="n">bad_trials</span><span class="p">,</span> <span class="n">corr_z</span><span class="p">,</span> <span class="n">amp_z</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">bad_trials_single_channel</span><span class="p">(</span>
+    <span class="n">trials_data</span><span class="p">,</span>
+    <span class="n">r_thresh</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>       <span class="c1"># Minimum acceptable correlation with template</span>
+    <span class="n">amp_z_thresh</span><span class="o">=</span><span class="mf">4.0</span>    <span class="c1"># Maximum acceptable peak-amplitude z-score</span>
+<span class="p">)</span>
+</code></pre></div>
+<h3 id="consensus-bad-trials-across-channels">Consensus Bad Trials Across Channels<a class="headerlink" href="#consensus-bad-trials-across-channels" title="Permanent link">&para;</a></h3>
+<p>Aggregates bad trial flags across multiple channels using a consensus voting threshold:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># bad_flags: (n_channels, n_trials) boolean array</span>
+<span class="n">consensus_mask</span><span class="p">,</span> <span class="n">bad_fractions</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">consensus_bad_trials</span><span class="p">(</span>
+    <span class="n">bad_flags</span><span class="p">,</span>
+    <span class="n">min_frac_channels</span><span class="o">=</span><span class="mf">0.5</span>  <span class="c1"># Flag trial if &gt;50% of channels detected an artifact</span>
+<span class="p">)</span>
+</code></pre></div>
 <hr />
-<h2 id="main-pages">Main Pages<a class="headerlink" href="#main-pages" title="Permanent link">&para;</a></h2>
-<ul>
-<li><a href="quickstart/">Quickstart</a> — 6-primitive runnable tour and visual architecture</li>
-<li><a href="install/">Installation</a> — package setup, hardware backends, and verification</li>
-<li><a href="01_architecture_and_philosophy/">Architecture &amp; Philosophy</a> — design doctrine and frozen boundaries</li>
-<li><a href="02_paths_addressing_metadata/">Addressing &amp; Metadata</a> — probe geometry and unit quality metrics</li>
-<li><a href="api/">Public API Reference</a> — 101 public symbols organized by domain</li>
-<li><a href="12_interactive_analyses/">Interactive Analyses</a> — end-to-end interactive workflows</li>
-<li><a href="memory/">AI Agent Guidance</a> — operational constraints and mechanical gates</li>
-</ul>
+<h2 id="3-high-level-trial-repair-pipelines-jnwbartifact_repair">3. High-Level Trial Repair Pipelines (<code>jnwb.artifact_repair</code>)<a class="headerlink" href="#3-high-level-trial-repair-pipelines-jnwbartifact_repair" title="Permanent link">&para;</a></h2>
+<h3 id="repair_lfp_trials"><code>repair_lfp_trials</code><a class="headerlink" href="#repair_lfp_trials" title="Permanent link">&para;</a></h3>
+<p>Performs time-resolved cross-channel synchrony detection on trial-segmented LFP tensors, replacing flagged artifact intervals with the condition-matched cross-trial median:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">jnwb</span>
+
+<span class="c1"># segments: (n_trials, n_channels, n_times)</span>
+<span class="c1"># times_ms: (n_times,) array of relative timestamps</span>
+<span class="n">repaired_lfp</span><span class="p">,</span> <span class="n">frac_flagged</span><span class="p">,</span> <span class="n">diagnostics</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">repair_lfp_trials</span><span class="p">(</span>
+    <span class="n">segments</span><span class="p">,</span>
+    <span class="n">times_ms</span><span class="o">=</span><span class="n">times_ms</span><span class="p">,</span>
+    <span class="n">z_thresh</span><span class="o">=</span><span class="mf">6.0</span><span class="p">,</span>          <span class="c1"># Threshold for cross-channel synchronous deviation</span>
+    <span class="n">window_ms</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mi">100</span><span class="p">,</span> <span class="mi">500</span><span class="p">)</span>   <span class="c1"># Active evaluation interval</span>
+<span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Total time-samples flagged and repaired: </span><span class="si">{</span><span class="n">frac_flagged</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">100</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">%&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="repair_band_artifacts"><code>repair_band_artifacts</code><a class="headerlink" href="#repair_band_artifacts" title="Permanent link">&para;</a></h3>
+<p>Extends artifact repair into the time-frequency domain across canonical frequency bands:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># power: (n_trials, n_channels, n_freqs, n_times)</span>
+<span class="c1"># freqs: (n_freqs,) exact frequency coordinates</span>
+<span class="n">repaired_power</span><span class="p">,</span> <span class="n">frac_by_band</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">repair_band_artifacts</span><span class="p">(</span>
+    <span class="n">power</span><span class="p">,</span>
+    <span class="n">freqs</span><span class="o">=</span><span class="n">freqs</span><span class="p">,</span>
+    <span class="n">z_thresh</span><span class="o">=</span><span class="mf">5.0</span>
+<span class="p">)</span>
+</code></pre></div>
 <hr />
-<h2 id="canonical-six-panel-visual-architecture">Canonical Six-Panel Visual Architecture<a class="headerlink" href="#canonical-six-panel-visual-architecture" title="Permanent link">&para;</a></h2>
-<p>The <code>jnwb</code> diagnostic suite provides a unified 6-panel visual grammar verifying the six core pillars of electrophysiological data science:</p>
+<h2 id="4-api-reference-summary">4. API Reference Summary<a class="headerlink" href="#4-api-reference-summary" title="Permanent link">&para;</a></h2>
 <table>
-  <tr>
-    <td align="center" width="50%">
-      <a href="quickstart.md#1-artifact-detection-repair">
-        <img src="assets/jnwb_quickstart.png" alt="Artifact Detection & Repair" width="100%">
-      </a><br>
-      <sub><b>1. Artifact Repair</b> (OBSERVED): Trial-level artifact detection & interpolation</sub>
-    </td>
-    <td align="center" width="50%">
-      <a href="quickstart.md#2-time-frequency-dynamics-complex-morlet-tfr">
-        <img src="assets/jnwb_quickstart.png" alt="Time-Frequency Representation" width="100%">
-      </a><br>
-      <sub><b>2. Spectral Dynamics</b> (DERIVED): Complex Morlet wavelet time-frequency decomposition</sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="50%">
-      <a href="quickstart.md#3-directed-information-flow-phase-slope-index">
-        <img src="assets/jnwb_quickstart.png" alt="Directed Connectivity" width="100%">
-      </a><br>
-      <sub><b>3. Directed Interaction</b> (DERIVED): Phase slope index with surrogate significance</sub>
-    </td>
-    <td align="center" width="50%">
-      <a href="quickstart.md#4-spiking-psth-onset-dynamics">
-        <img src="assets/jnwb_quickstart.png" alt="Spiking Dynamics" width="100%">
-      </a><br>
-      <sub><b>4. Spiking Latencies</b> (DERIVED): PSTH bootstrap and exponential onset fitting</sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="50%">
-      <a href="quickstart.md#5-non-parametric-statistical-testing">
-        <img src="assets/jnwb_quickstart.png" alt="Statistical Testing" width="100%">
-      </a><br>
-      <sub><b>5. Hypothesis Testing</b> (DERIVED): Non-parametric permutation tests and Clopper-Pearson CIs</sub>
-    </td>
-    <td align="center" width="50%">
-      <a href="quickstart.md#6-joint-representational-similarity-jrsa">
-        <img src="assets/jnwb_quickstart.png" alt="Representational Geometry" width="100%">
-      </a><br>
-      <sub><b>6. Representational Geometry</b> (DERIVED): Cross-modal representational similarity analysis</sub>
-    </td>
-  </tr>
+<thead>
+<tr>
+<th>Function</th>
+<th>Primary Input</th>
+<th>Returns</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>channel_correlation_matrix</code></td>
+<td><span class="arithmatex">\((C \times T)\)</span></td>
+<td><span class="arithmatex">\((C \times C)\)</span></td>
+<td>Inter-electrode correlation</td>
+</tr>
+<tr>
+<td><code>bad_channels_from_correlation</code></td>
+<td><span class="arithmatex">\((C \times C)\)</span></td>
+<td><code>(bad_mask, mean_corr, z_scores)</code></td>
+<td>Outlier channel detection</td>
+</tr>
+<tr>
+<td><code>trial_correlation_matrix</code></td>
+<td><span class="arithmatex">\((N \times T)\)</span></td>
+<td><span class="arithmatex">\((N \times N)\)</span></td>
+<td>Inter-trial waveform correlation</td>
+</tr>
+<tr>
+<td><code>bad_trials_single_channel</code></td>
+<td><span class="arithmatex">\((N \times T)\)</span></td>
+<td><code>(bad_mask, corr_z, amp_z)</code></td>
+<td>Per-channel bad trial detection</td>
+</tr>
+<tr>
+<td><code>consensus_bad_trials</code></td>
+<td><span class="arithmatex">\((C \times N)\)</span></td>
+<td><code>(consensus_mask, frac_channels)</code></td>
+<td>Multi-channel consensus voting</td>
+</tr>
+<tr>
+<td><code>repair_lfp_trials</code></td>
+<td><span class="arithmatex">\((N \times C \times T)\)</span></td>
+<td><code>(repaired_lfp, frac_flagged, diag)</code></td>
+<td>Median substitution on raw LFP</td>
+</tr>
+<tr>
+<td><code>repair_band_artifacts</code></td>
+<td><span class="arithmatex">\((N \times C \times F \times T)\)</span></td>
+<td><code>(repaired_power, frac_by_band)</code></td>
+<td>Median substitution on TFR</td>
+</tr>
+</tbody>
 </table>
-
-<p>Generate the complete standalone diagnostic figure locally with one line:</p>
-<div class="highlight"><pre><span></span><code>python<span class="w"> </span>examples/quickstart_jnwb.py
-</code></pre></div>
 
 
 
@@ -1308,10 +1572,10 @@ pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": ".", "features": ["navigation.sections", "navigation.top", "navigation.indexes", "search.suggest", "search.highlight", "content.code.copy"], "search": "assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.sections", "navigation.top", "navigation.indexes", "search.suggest", "search.highlight", "content.code.copy"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
       
         <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
       
