@@ -88,6 +88,40 @@ repaired_lfp, frac_flagged, diagnostics = jnwb.repair_lfp_trials(
 print(f"Total time-samples flagged and repaired: {frac_flagged * 100:.2f}%")
 ```
 
+### `detect_band_outliers` — the detection rule, on its own
+
+`repair_band_artifacts` pairs a detector with a substitution. `detect_band_outliers` is that
+detector alone, for callers who need the rule without the substitution:
+
+```python
+# band_trace: (n_trials, n_times), already reduced to one value per (trial, time)
+flagged, scale = jnwb.detect_band_outliers(band_trace, z_thresh=6.0, sided="upper")
+```
+
+`trend` is the median over trials (the shared evoked shape), `resid = value - trend`, and
+`scale` is `median(|resid|)` **pooled** over all `(trial, time)` — one global scale, not one per
+time bin. A per-bin MAD is itself inflated during the evoked response, and would mask a real
+outlier exactly where one matters most. A returned `scale` of `0.0` means the trend was matched
+exactly and nothing was flagged.
+
+!!! warning "`sided="both"` is not the conservative choice"
+    The default `"upper"` flags power *increases* only. `"both"` also flags decreases — so when
+    the response under study **is** a power decrease, a two-sided detector flags genuine
+    decreases as artifacts and substitutes them away. The detector then eats the very effect it
+    was meant to protect. Choose `"both"` only when artifacts in your data genuinely go in both
+    directions.
+
+    This is not hypothetical. A downstream reimplementation of this rule silently used a
+    two-sided test while its own docstring claimed parity with the one-sided library version.
+    The detector is exposed here precisely so the tail is an argument a caller states, rather
+    than a detail buried in a copy that can drift.
+
+**Prefer calling over retyping.** A numerical rule that is easier to retype than to reuse will
+be retyped, and the copy will diverge from its docstring without anyone noticing. That is why
+`repair_band_artifacts` calls this function rather than restating it — the rule has exactly one
+implementation — and why it accepts channel-averaged input (see below) rather than forcing a
+fork on anyone whose array is shaped differently.
+
 ### `repair_band_artifacts`
 Extends artifact repair into the time-frequency domain across canonical frequency bands:
 
@@ -100,6 +134,17 @@ repaired_power, frac_by_band = jnwb.repair_band_artifacts(
     z_thresh=5.0
 )
 ```
+
+Channel-averaged power is accepted directly — pass `(n_trials, n_freqs, n_times)` and the same
+reduced shape comes back:
+
+```python
+repaired_avg, frac_by_band = jnwb.repair_band_artifacts(power.mean(axis=1), freqs=freqs)
+```
+
+Both forms agree by construction: detection runs on the channel-averaged trace either way, so
+the 3-D path is the 4-D path with a length-1 channel axis, not a second implementation. Pass
+`sided="both"` only after reading the warning above.
 
 ---
 

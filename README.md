@@ -128,7 +128,15 @@ print(f"TFR shape: {tfr.shape}, Beta band power: {beta_power:.4f}")
 
 ## AI Agent & Automated Harness Guidance
 
-When deploying autonomous AI coding agents or automated research harnesses to analyze electrophysiology data with `jnwb`, refer to:
+**For AI agents: read and inspect [`artifacts/context.md`](artifacts/context.md) first.** It is
+the single self-contained orientation point for this repository — what `jnwb` is, where truth
+lives, which entry points are authoritative, the invariants that outrank convenience, and the
+commands that verify a claim. It assumes no particular tooling: any agent that can read files,
+run commands, and carry notes between turns — a terminal coding assistant, a sandboxed research
+harness, or any system with a persistent memory or skill layer — has enough from that one file to
+act correctly here, and knows where to look for the rest.
+
+The documents it routes to, for direct reference:
 
 - **[`AGENTS.md`](AGENTS.md)**: The authoritative repository operational contract, epistemic discipline, truth precedence hierarchy, and PRGS operational loop.
 - **[`skills/`](skills/)**: The 8 canonical domain skills routing tasks to `jnwb` primitives (`jnwb-nwb-data`, `jnwb-spiking`, `jnwb-lfp-spectral`, `jnwb-statistics`, `jnwb-population`, `jnwb-connectivity`, `jnwb-figures`).
@@ -138,7 +146,7 @@ When deploying autonomous AI coding agents or automated research harnesses to an
 
 ## Documentation
 
-Twelve topic guides (architecture and philosophy through interactive analyses), a complete API reference covering all 101 exported symbols, and the developer invariants are available on [Read the Docs](https://jnwb.readthedocs.io/).
+Twelve topic guides (architecture and philosophy through interactive analyses), a complete API reference covering all 105 exported symbols, and the developer invariants are available on [Read the Docs](https://jnwb.readthedocs.io/).
 
 ## License
 

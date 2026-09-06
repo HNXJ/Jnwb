@@ -228,7 +228,57 @@ DEFAULT_BANDS = {"Theta(4-8Hz)": (4, 8), "Alpha(8-14Hz)": (8, 14), "Beta(14-30Hz
 TFR_Z_THRESH = 6.0
 
 
-def repair_band_artifacts(power, freqs, band_ranges=None, z_thresh=TFR_Z_THRESH):
+#: Accepted tails for :func:`detect_band_outliers`. ``"upper"`` is the default because the
+#: artifacts this detector was built for are power *increases*; see that function's warning
+#: about what ``"both"`` costs when the response of interest is a decrease.
+DETECTION_TAILS = ("upper", "both")
+
+
+def detect_band_outliers(band_trace, z_thresh=TFR_Z_THRESH, sided="upper"):
+    """Flag (trial, time) cells whose power departs from the cross-trial trend.
+
+    Split out of :func:`repair_band_artifacts` 2026-09-05 so the detection *rule* can be reused
+    without the substitution it is normally paired with, and without the 4-D array layout that
+    function requires. It exists because the rule was demonstrably easier to retype than to
+    reuse: a downstream reimplementation silently turned this one-sided test into a two-sided
+    one while its docstring still claimed parity with the library. Exposing the detector makes
+    the tail an argument the caller states, rather than a detail buried in a copy.
+
+    trend = median over trials (the shared evoked shape); resid = value - trend;
+    scale = median(|resid|) pooled over all (trial, time) -- a single global scale, not one per
+    time bin, because a per-bin MAD is itself inflated during the evoked response and would
+    mask a real outlier exactly where one matters most.
+
+    Args:
+        band_trace: (n_trials, n_times) array, already reduced to one value per (trial, time).
+        z_thresh: robust-z threshold.
+        sided: ``"upper"`` (default) flags increases only. ``"both"`` also flags decreases.
+
+    Returns:
+        (flagged, scale) -- a bool (n_trials, n_times) mask and the pooled robust scale. A
+        scale of 0.0 means the trend was matched exactly and nothing is flagged.
+
+    Warning:
+        ``sided="both"`` is not the conservative choice. When the response under study is a
+        power decrease, a two-sided detector flags genuine decreases as artifacts and
+        substitutes them away -- the detector eats the effect it was meant to protect. Choose
+        ``"both"`` only when artifacts in this data genuinely go in both directions.
+    """
+    if sided not in DETECTION_TAILS:
+        raise ValueError(f"sided must be one of {list(DETECTION_TAILS)}; got {sided!r}")
+    band_trace = np.asarray(band_trace, dtype=float)
+    trend = np.median(band_trace, axis=0)
+    resid = band_trace - trend[None, :]
+    scale = np.median(np.abs(resid))
+    if scale < 1e-12:
+        return np.zeros(band_trace.shape, dtype=bool), 0.0
+    z = resid / (1.4826 * scale)
+    flagged = np.abs(z) > z_thresh if sided == "both" else z > z_thresh
+    return flagged, float(scale)
+
+
+def repair_band_artifacts(power, freqs, band_ranges=None, z_thresh=TFR_Z_THRESH,
+                          sided="upper"):
     """Per-band, cross-trial-median substitution of sparse single-trial TFR power spikes.
 
     Promoted 2026-08-14 from ``context/figures/fig_v1_omission_band_dynamics/
@@ -253,15 +303,34 @@ def repair_band_artifacts(power, freqs, band_ranges=None, z_thresh=TFR_Z_THRESH)
     detector in artifacts/.lab/lfp-movement-artifact-v198o-v182o-20260806.json). Any (trial,
     time) with resid/scale beyond z_thresh has ALL channels and ALL of that band's frequency
     rows, at that time index only, replaced by the cross-trial median ("2 11 2 -> 2 2 2": median
-    across trials at the same condition and time, not a temporal filter). One-sided: artifacts
-    are power INCREASES, not decreases.
+    across trials at the same condition and time, not a temporal filter). Detection itself is
+    :func:`detect_band_outliers`, which this function calls rather than restates -- the rule has
+    exactly one implementation. One-sided by default: artifacts are power INCREASES, not
+    decreases. Read that function's warning before passing ``sided="both"``.
 
-    power: (n_trials, n_channels, n_freqs, n_times). Returns (repaired, frac_flagged_by_band).
+    power: (n_trials, n_channels, n_freqs, n_times), or (n_trials, n_freqs, n_times) for data
+    already reduced over channels -- the reduced form returns the same reduced shape. Detection
+    runs on the channel-averaged trace in both cases, so the two agree by construction; the 3-D
+    form exists so a caller holding channel-averaged power can call this instead of retyping it.
+    Returns (repaired, frac_flagged_by_band).
     """
     band_ranges = DEFAULT_BANDS if band_ranges is None else band_ranges
+    power = np.asarray(power)
+    if power.ndim not in (3, 4):
+        raise ValueError(
+            "power must be (n_trials, n_channels, n_freqs, n_times) or, for data already "
+            f"reduced over channels, (n_trials, n_freqs, n_times); got ndim={power.ndim}"
+        )
+    # A caller holding channel-averaged power should not have to retype the rule to use it.
+    # Detection already runs on the channel-averaged trace either way, so a length-1 channel
+    # axis makes the 3-D case bit-identical to the 4-D path rather than a second code path.
+    channel_axis_added = power.ndim == 3
+    if channel_axis_added:
+        power = power[:, None, :, :]
     n_trials = power.shape[0]
     if n_trials < 5:
-        return power, {}   # too few trials for a cross-trial median to mean anything
+        # too few trials for a cross-trial median to mean anything
+        return (power[:, 0] if channel_axis_added else power), {}
 
     repaired = power.copy()
     frac_flagged = {}
@@ -273,14 +342,10 @@ def repair_band_artifacts(power, freqs, band_ranges=None, z_thresh=TFR_Z_THRESH)
             continue
 
         band_trace = power[:, :, sel, :].mean(axis=(1, 2))        # (trials, times)
-        trend = np.median(band_trace, axis=0)                      # (times,)
-        resid = band_trace - trend[None, :]
-        scale = np.median(np.abs(resid))                           # single pooled robust scale
-        if scale < 1e-12:
+        flagged, scale = detect_band_outliers(band_trace, z_thresh=z_thresh, sided=sided)
+        if scale == 0.0:
             frac_flagged[name] = 0.0
             continue
-        z = resid / (1.4826 * scale)
-        flagged = z > z_thresh                                     # one-sided: artifacts are increases
         frac_flagged[name] = float(flagged.mean())
         if not flagged.any():
             continue
@@ -291,6 +356,8 @@ def repair_band_artifacts(power, freqs, band_ranges=None, z_thresh=TFR_Z_THRESH)
             for b in bad_trials:
                 repaired[b][:, freq_idx, ti] = band_median[:, :, ti]
 
+    if channel_axis_added:
+        repaired = repaired[:, 0]
     return repaired, frac_flagged
 
 

@@ -8,7 +8,7 @@
 
 All algorithms are mathematically bounded, dataset-agnostic, and guaranteed to operate without condition leakage or hardcoded experiment heuristics.
 
-[Scope & status](01_architecture_and_philosophy.md) · [Public API contract](api.md) (101 symbols) · [Agent Guidance](memory.md)
+[Scope & status](01_architecture_and_philosophy.md) · [Public API contract](api.md) (105 symbols) · [Agent Guidance](memory.md)
 
 ---
 
@@ -51,7 +51,7 @@ print(f"Beta band power: {beta_power:.4f}")
 - [Installation](install.md) — package setup, hardware backends, and verification
 - [Architecture & Philosophy](01_architecture_and_philosophy.md) — design doctrine and frozen boundaries
 - [Addressing & Metadata](02_paths_addressing_metadata.md) — probe geometry and unit quality metrics
-- [Public API Reference](api.md) — 101 public symbols organized by domain
+- [Public API Reference](api.md) — 105 public symbols organized by domain
 - [Interactive Analyses](12_interactive_analyses.md) — end-to-end interactive workflows
 - [AI Agent Guidance](memory.md) — operational constraints and mechanical gates
 

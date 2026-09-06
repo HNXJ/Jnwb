@@ -10,6 +10,8 @@ import pytest
 
 from jnwb.artifact_repair import (
     repair_lfp_trials,
+    detect_band_outliers,
+    DETECTION_TAILS,
     repair_band_artifacts,
     flagged_to_intervals,
     interpolate_intervals,
@@ -129,3 +131,99 @@ class TestIntervalHelpers:
         assert np.isclose(out[5, 0], seg[4, 0], atol=0.5)
         assert np.allclose(out[0:5], seg[0:5])
         assert np.allclose(out[15:], seg[15:])
+
+
+class TestDetectBandOutliers:
+    """The detection rule, exposed so its tail is a stated argument rather than a buried detail."""
+
+    @staticmethod
+    def _trace(n_trials=20, n_times=30):
+        rng = np.random.default_rng(11)
+        shared = np.linspace(1.0, 2.0, n_times)          # common evoked shape
+        return shared[None, :] + rng.normal(0, 0.01, (n_trials, n_times))
+
+    def test_flags_nothing_on_clean_data(self):
+        flagged, scale = detect_band_outliers(self._trace())
+        assert not flagged.any()
+        assert scale > 0.0
+
+    def test_flags_injected_increase(self):
+        trace = self._trace()
+        trace[3, 10] += 5.0
+        flagged, _ = detect_band_outliers(trace)
+        assert flagged[3, 10]
+        assert flagged.sum() == 1
+
+    def test_upper_ignores_decrease_but_both_flags_it(self):
+        """The drift that motivated exposing this: a two-sided test eats genuine decreases."""
+        trace = self._trace()
+        trace[4, 12] -= 5.0
+        upper, _ = detect_band_outliers(trace, sided="upper")
+        both, _ = detect_band_outliers(trace, sided="both")
+        assert not upper[4, 12], "one-sided detector must not flag a power decrease"
+        assert both[4, 12], "two-sided detector does flag it -- hence the warning"
+
+    def test_zero_scale_on_degenerate_input(self):
+        flagged, scale = detect_band_outliers(np.ones((10, 5)))
+        assert scale == 0.0
+        assert not flagged.any()
+
+    def test_invalid_sided_rejected(self):
+        with pytest.raises(ValueError, match="sided must be one of"):
+            detect_band_outliers(self._trace(), sided="lower")
+
+    def test_tails_constant_is_documented_pair(self):
+        assert DETECTION_TAILS == ("upper", "both")
+
+    def test_importable_from_top_level(self):
+        import jnwb
+        assert jnwb.detect_band_outliers is detect_band_outliers
+        assert jnwb.DETECTION_TAILS is DETECTION_TAILS
+
+
+class TestRepairBandArtifactsShapeContract:
+    """3-D (channel-averaged) input is accepted so nobody has to fork the rule to use it."""
+
+    @staticmethod
+    def _power(n_trials=20, n_ch=6, n_freqs=40, n_times=25):
+        rng = np.random.default_rng(5)
+        freqs = np.linspace(2.0, 100.0, n_freqs)
+        power = np.abs(rng.normal(10.0, 1.0, (n_trials, n_ch, n_freqs, n_times)))
+        if n_trials > 7:                               # cross-channel spike, one trial/time
+            power[7, :, :, 12] += 80.0
+        return power, freqs
+
+    def test_3d_input_returns_3d_and_agrees_with_4d_flagging(self):
+        power, freqs = self._power()
+        rep4, frac4 = repair_band_artifacts(power, freqs)
+        rep3, frac3 = repair_band_artifacts(power.mean(axis=1), freqs)
+        assert rep4.shape == power.shape
+        assert rep3.shape == power.mean(axis=1).shape
+        # Detection runs on the channel-averaged trace in both paths, so flagging must match.
+        assert frac3 == frac4
+
+    def test_3d_path_actually_repairs(self):
+        power, freqs = self._power()
+        avg = power.mean(axis=1)
+        repaired, frac = repair_band_artifacts(avg, freqs)
+        assert not np.allclose(repaired, avg)
+        assert any(v > 0 for v in frac.values())
+
+    def test_bad_ndim_rejected(self):
+        with pytest.raises(ValueError, match="power must be"):
+            repair_band_artifacts(np.ones((5, 5)), np.linspace(2, 100, 5))
+
+    def test_too_few_trials_returns_input_shape_unchanged(self):
+        power, freqs = self._power(n_trials=3)
+        avg = power.mean(axis=1)
+        repaired, frac = repair_band_artifacts(avg, freqs)
+        assert repaired.shape == avg.shape
+        assert frac == {}
+        np.testing.assert_allclose(repaired, avg)
+
+    def test_sided_both_is_reachable_and_flags_at_least_as_much(self):
+        power, freqs = self._power()
+        _, frac_upper = repair_band_artifacts(power, freqs)
+        _, frac_both = repair_band_artifacts(power, freqs, sided="both")
+        for band in frac_upper:
+            assert frac_both[band] >= frac_upper[band]

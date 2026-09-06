@@ -32,6 +32,8 @@ All 101 core functions, classes, and constants exported in the top-level jnwb na
 
 | Symbol | Type | Signature / Description |
 |---|---|---|
+| jnwb.DETECTION_TAILS | constant | ('upper', 'both')<br>*Accepted tails for `detect_band_outliers`; `'both'` is not the conservative choice.* |
+| jnwb.detect_band_outliers | function | detect_band_outliers(band_trace, z_thresh=6.0, sided='upper')<br>*Flag (trial, time) cells departing from the cross-trial trend; returns (mask, scale).* |
 | jnwb.repair_band_artifacts | function | repair_band_artifacts(power, freqs, band_ranges=None, z_thresh=6.0)<br>*Per-band, cross-trial-median substitution of sparse single-trial TFR power spikes.* |
 | jnwb.repair_lfp_trials | function | repair_lfp_trials(segments, times_ms=None, z_thresh=6.0, exclude_window_ms=None, reward_window_ms=None, min_trials=5)<br>*Cross-channel-synchrony detection + cross-trial-median substitution.* |
 
