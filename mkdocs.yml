@@ -53,6 +53,7 @@ nav:
       - Welcome: index.md
       - Installation: install.md
       - Quickstart: quickstart.md
+      - Common Mistakes: common_mistakes.md
       - Public API: api.md
       - AI Agent Memory: memory.md
 
