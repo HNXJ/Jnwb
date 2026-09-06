@@ -143,6 +143,8 @@ plan = jnwb.build_permutation_plan(
 )
 ```
 
+![Exchangeable Permutation Null Distribution](assets/figures/fig08_permutation_null.png)
+
 ---
 
 ## 5. Trial Cycle Detection, Subblock Stratification & Cross-Modal Comparison

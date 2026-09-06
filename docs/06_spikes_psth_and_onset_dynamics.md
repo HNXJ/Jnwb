@@ -26,6 +26,8 @@ time_bins_ms, rate_hz, sem_hz = jnwb.raster_psth(
 )
 ```
 
+![Spike Raster and PSTH](assets/figures/fig02_raster_psth.png)
+
 ### Response Metrics & Significance Classification
 
 ```python
@@ -115,6 +117,8 @@ print(f"Amplitude: {fit['amplitude']:.2f} Hz")
 print(f"Goodness-of-fit R2: {fit['r2']:.4f}")
 print(f"Optimizer Bound Status: {fit['bound_status']}")
 ```
+
+![Causal Exponential Smoothing and Onset Latency Fit](assets/figures/fig03_onset_fitting.png)
 
 ### Boundary Status & Censoring Flags (`bound_status`)
 When an onset lies outside the search interval (e.g. pre-stimulus noise or unconstrained drift), nonlinear least squares pins $t_0$ against the outer bounds while reporting `converged: True`. `jnwb` reports `bound_status` to distinguish unconstrained interior fits from boundary-censored solutions:

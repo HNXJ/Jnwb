@@ -22,6 +22,8 @@ graph TD
     Repair --> Clean[Repaired LFP Tensor + Diagnostics]
 ```
 
+![Multichannel LFP Artifact Detection and Repair](assets/figures/fig10_artifact_repair.png)
+
 ---
 
 ## 2. Artifact Detection Primitives (`jnwb.artifact_detection`)

@@ -27,9 +27,12 @@ import jnwb
 decode_res = jnwb.nested_cv_linear_svm(X, labels, n_splits=5)
 
 print("CV Accuracy:", decode_res["accuracy"])
-print("Accuracy Source:", decode_res["accuracy_source"])
-print("Confusion Matrix:\n", decode_res["confusion_matrix"])
+print("Majority Baseline:", decode_res["majority_baseline_accuracy"])
+print("F1 Score:", decode_res["f1"])
+print("ROC-AUC:", decode_res["auc"])
 ```
+
+![Nested Cross-Validated Population Decoding](assets/figures/fig07_population_decoding.png)
 
 ### Baselines & Fold Partitions
 

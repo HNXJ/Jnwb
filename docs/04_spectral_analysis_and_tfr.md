@@ -80,6 +80,8 @@ stands -- pass power and baseline, never decibels.
 `nan_policy="omit"` aggregates over non-NaN entries only. Artifact repair legitimately leaves
 NaNs behind, so this is a real choice, but never a silent one.
 
+![Power Ratio Aggregation and Log-Last Rule](assets/figures/fig06_aggregate_to_db.png)
+
 ### Spectral Tilt, Harmonic Analysis & Referencing
 
 ```python
@@ -93,6 +95,8 @@ harmonics = jnwb.harmonic_analysis(lfp_trace, sampling_rate=1000.0, harmonic_ord
 bipolar_data = jnwb.bipolar_reference(lfp_multichannel)
 laplacian_data = jnwb.laplacian_reference(lfp_multichannel)
 ```
+
+![Power Spectral Density and 1/f Aperiodic Tilt](assets/figures/fig04_psd_spectral_tilt.png)
 
 ---
 
@@ -199,6 +203,8 @@ tfr_res = jnwb.complex_tfr(
 # - tfr_res.phase: np.ndarray (angle in radians)
 # - tfr_res.amplitude: np.ndarray (|z|)
 ```
+
+![Complex Morlet TFR and Cone of Influence](assets/figures/fig05_complex_tfr_coi.png)
 
 ### Streaming TFR Accumulation (`TFRAccumulator`) & Compression (`compress_fp32`)
 

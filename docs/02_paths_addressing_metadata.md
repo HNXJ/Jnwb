@@ -68,6 +68,8 @@ Attaches standardized `unit_id`, `area`, and `layer` columns directly to units t
 enriched_units = jnwb.enrich_units_dataframe(units_df, electrodes_df)
 ```
 
+![Spatial and Laminar Addressing](assets/figures/fig01_addressing_laminar.png)
+
 ---
 
 ## 3. Unit Metadata, Quality Classification & Census Audits (`jnwb/metadata.py`)

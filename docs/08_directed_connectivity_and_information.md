@@ -80,6 +80,8 @@ psi_res = jnwb.phase_slope_index(
 print("PSI normalized value:", psi_res.statistic)
 ```
 
+![Directed Connectivity and Phase Slope Index](assets/figures/fig09_directed_connectivity.png)
+
 ---
 
 ## 4. Transfer Entropy (`transfer_entropy`)
