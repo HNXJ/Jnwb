@@ -52,7 +52,7 @@ arrays and metadata tables; it does not impose a workflow.
 pip install jnwb
 
 # Exact verified release
-pip install jnwb==0.1.0
+pip install jnwb==0.1.1
 
 # With optional GPU and PyTorch backends
 pip install "jnwb[torch,gpu]"

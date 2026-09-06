@@ -79,4 +79,4 @@ nav:
       - Full Surface Contract: api.md
 
 extra:
-  jnwb_version: "0.1.0"
+  jnwb_version: "0.1.1"

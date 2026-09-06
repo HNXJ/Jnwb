@@ -18,7 +18,7 @@ Quick Start:
 Author: Claude Code
 Date: 2025-06-24
 Restructured: 2026-08-19 -- split into this generic library + omission/ project package.
-Version: 0.1.0
+Version: 0.1.1
 
 Versioning note: this package was carved out of a single project repo (previously versioned
 2.0.0 as part of that project's own history) into a standalone generic library on 2026-08-19.
@@ -26,10 +26,10 @@ It restarts at 0.1.0 under standard pre-1.0 semver -- the API surface has not ye
 by a second consumer, so nothing here should be treated as stable/frozen until 1.0.0.
 """
 
-__version__ = '0.1.0'
-__release_date__ = '2026-08-19'
+__version__ = '0.1.1'
+__release_date__ = '2026-09-06'
 __author__ = 'Claude Code'
-__status__ = 'Alpha -- pre-1.0, API not yet frozen'
+__status__ = 'Beta -- pre-1.0, API not yet frozen'
 
 import logging
 from pathlib import Path
