@@ -7,7 +7,7 @@ name = "jnwb"
 dynamic = ["version"]
 description = "Generic Python library for high-density electrophysiology, time-frequency analysis, and statistical neuroscience on Neurodata Without Borders (NWB) datasets."
 readme = "README.md"
-license = "MIT"
+license = { text = "MIT" }
 authors = [
     { name = "Hamed Nejat" }
 ]
