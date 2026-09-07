@@ -262,6 +262,8 @@
       
         
       
+        
+      
     
     
     
@@ -379,6 +381,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../common_mistakes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Common Mistakes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../api/" class="md-nav__link">
         
   
@@ -414,7 +444,7 @@
   <span class="md-ellipsis">
     
   
-    AI Agent Memory
+    Recipes
   
 
     
@@ -1529,7 +1559,12 @@ $<span class="arithmatex">\(\text{claim} \in \{\text{observed}, \text{derived}, 
 <tr>
 <td><code>metadata</code></td>
 <td>Unit quality classification, census, &amp; SNR auditing</td>
-<td><code>get_all_units_metadata</code>, <code>classify_unit_quality</code>, <code>unit_census_report</code>, <code>get_snr_analysis</code>, <code>filter_by_criteria</code>, <code>audit_units</code>, <code>audit_electrodes</code>, <code>assign_quality_tier</code>, <code>compare_old_new_criteria</code>, <code>old_new_summary_table</code>, <code>electrode_inventory</code></td>
+<td><code>get_all_units_metadata</code>, <code>classify_unit_quality</code>, <code>unit_census_report</code>, <code>get_snr_analysis</code>, <code>filter_by_criteria</code>, <code>audit_units</code>, <code>audit_electrodes</code>, <code>assign_quality_tier</code>, <code>electrode_inventory</code></td>
+</tr>
+<tr>
+<td><code>filtering</code></td>
+<td>Zero-phase &amp; causal Butterworth bandpass and notch SOS filters</td>
+<td><code>bandpass_filter</code>, <code>notch_filter</code></td>
 </tr>
 <tr>
 <td><code>ontology</code></td>
@@ -1543,8 +1578,8 @@ $<span class="arithmatex">\(\text{claim} \in \{\text{observed}, \text{derived}, 
 </tr>
 <tr>
 <td><code>spectral</code></td>
-<td>Multi-taper spectral analysis, coherence, and PLV</td>
-<td><code>compute_psd</code>, <code>band_power</code>, <code>spectral_tilt</code>, <code>harmonic_analysis</code>, <code>imaginary_coherency</code>, <code>cross_area_coherence</code>, <code>bipolar_reference</code>, <code>laplacian_reference</code>, <code>to_db</code>, <code>CANONICAL_BANDS</code></td>
+<td>Multi-taper spectral analysis, coherence, CSD, and PLV</td>
+<td><code>compute_psd</code>, <code>compute_multitaper_psd</code>, <code>band_power</code>, <code>spectral_tilt</code>, <code>voltage_curvature_1d</code>, <code>current_source_density_1d</code>, <code>harmonic_analysis</code>, <code>imaginary_coherency</code>, <code>cross_area_coherence</code>, <code>bipolar_reference</code>, <code>laplacian_reference</code>, <code>to_db</code>, <code>CANONICAL_BANDS</code></td>
 </tr>
 <tr>
 <td><code>tfr_accumulator</code></td>
@@ -1578,8 +1613,8 @@ $<span class="arithmatex">\(\text{claim} \in \{\text{observed}, \text{derived}, 
 </tr>
 <tr>
 <td><code>spiking</code></td>
-<td>Spike metrics, significance testing, phase locking</td>
-<td><code>compute_response_metrics</code>, <code>classify_response_significance</code>, <code>phase_locking_index</code></td>
+<td>Spike metrics, significance testing, phase locking &amp; PPC</td>
+<td><code>compute_response_metrics</code>, <code>classify_response_significance</code>, <code>phase_locking_index</code>, <code>pairwise_phase_consistency</code>, <code>gaussian_smooth_rate</code></td>
 </tr>
 <tr>
 <td><code>onset_fitting</code></td>
@@ -1593,8 +1628,8 @@ $<span class="arithmatex">\(\text{claim} \in \{\text{observed}, \text{derived}, 
 </tr>
 <tr>
 <td><code>statistics</code></td>
-<td>Bootstrap CIs, permutation nulls, paired fire tests, FDR</td>
-<td><code>StatisticalAnalysis</code>, <code>rate_in_window</code>, <code>fires_in_window</code>, <code>fire_indicator</code>, <code>paired_fire_prob_test</code>, <code>shuffle_pvalue_paired</code>, <code>shuffle_pvalue_unpaired</code>, <code>detect_trial_cycles</code>, <code>assign_subblock_quartiles</code>, <code>shuffle_r2_ci</code>, <code>cross_modal_comparison</code></td>
+<td>Bootstrap CIs, permutation nulls, paired fire tests, cluster tests, FDR</td>
+<td><code>StatisticalAnalysis</code>, <code>rate_in_window</code>, <code>fires_in_window</code>, <code>fire_indicator</code>, <code>paired_fire_prob_test</code>, <code>shuffle_pvalue_paired</code>, <code>shuffle_pvalue_unpaired</code>, <code>cluster_permutation_test</code>, <code>detect_trial_cycles</code>, <code>assign_subblock_quartiles</code>, <code>shuffle_r2_ci</code>, <code>cross_modal_comparison</code></td>
 </tr>
 <tr>
 <td><code>permutation</code></td>

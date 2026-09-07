@@ -262,6 +262,8 @@
       
         
       
+        
+      
     
     
     
@@ -379,6 +381,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../common_mistakes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Common Mistakes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../api/" class="md-nav__link">
         
   
@@ -414,7 +444,7 @@
   <span class="md-ellipsis">
     
   
-    AI Agent Memory
+    Recipes
   
 
     
@@ -826,6 +856,17 @@
     <span class="md-ellipsis">
       
         repair_lfp_trials
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#detect_band_outliers-the-detection-rule-on-its-own" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        detect_band_outliers — the detection rule, on its own
       
     </span>
   </a>
@@ -1340,6 +1381,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#detect_band_outliers-the-detection-rule-on-its-own" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        detect_band_outliers — the detection rule, on its own
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#repair_band_artifacts" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1402,6 +1454,7 @@
     Mask --&gt; Repair[Cross-Trial Median Substitution]
     Repair --&gt; Clean[Repaired LFP Tensor + Diagnostics]
 </code></pre></div>
+<p><img alt="Multichannel LFP Artifact Detection and Repair" src="../assets/figures/fig10_artifact_repair.png" /></p>
 <hr />
 <h2 id="2-artifact-detection-primitives-jnwbartifact_detection">2. Artifact Detection Primitives (<code>jnwb.artifact_detection</code>)<a class="headerlink" href="#2-artifact-detection-primitives-jnwbartifact_detection" title="Permanent link">&para;</a></h2>
 <p>All 5 core artifact detection functions are exposed directly in the top-level <code>jnwb</code> namespace:</p>
@@ -1449,8 +1502,36 @@
     <span class="n">window_ms</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mi">100</span><span class="p">,</span> <span class="mi">500</span><span class="p">)</span>   <span class="c1"># Active evaluation interval</span>
 <span class="p">)</span>
 
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Total time-samples flagged and repaired: </span><span class="si">{</span><span class="n">frac_flagged</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">100</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">%&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Total time-samples flagged and repaired: </span><span class="si">{</span><span class="n">frac_flagged</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">100</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">%"</span><span class="p">)</span>
 </code></pre></div>
+<h3 id="detect_band_outliers-the-detection-rule-on-its-own"><code>detect_band_outliers</code> — the detection rule, on its own<a class="headerlink" href="#detect_band_outliers-the-detection-rule-on-its-own" title="Permanent link">&para;</a></h3>
+<p><code>repair_band_artifacts</code> pairs a detector with a substitution. <code>detect_band_outliers</code> is that
+detector alone, for callers who need the rule without the substitution:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># band_trace: (n_trials, n_times), already reduced to one value per (trial, time)</span>
+<span class="n">flagged</span><span class="p">,</span> <span class="n">scale</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">detect_band_outliers</span><span class="p">(</span><span class="n">band_trace</span><span class="p">,</span> <span class="n">z_thresh</span><span class="o">=</span><span class="mf">6.0</span><span class="p">,</span> <span class="n">sided</span><span class="o">=</span><span class="s2">"upper"</span><span class="p">)</span>
+</code></pre></div>
+<p><code>trend</code> is the median over trials (the shared evoked shape), <code>resid = value - trend</code>, and
+<code>scale</code> is <code>median(|resid|)</code> <strong>pooled</strong> over all <code>(trial, time)</code> — one global scale, not one per
+time bin. A per-bin MAD is itself inflated during the evoked response, and would mask a real
+outlier exactly where one matters most. A returned <code>scale</code> of <code>0.0</code> means the trend was matched
+exactly and nothing was flagged.</p>
+<div class="admonition warning">
+<p class="admonition-title"><code>sided="both"</code> is not the conservative choice</p>
+<p>The default <code>"upper"</code> flags power <em>increases</em> only. <code>"both"</code> also flags decreases — so when
+the response under study <strong>is</strong> a power decrease, a two-sided detector flags genuine
+decreases as artifacts and substitutes them away. The detector then eats the very effect it
+was meant to protect. Choose <code>"both"</code> only when artifacts in your data genuinely go in both
+directions.</p>
+<p>This is not hypothetical. A downstream reimplementation of this rule silently used a
+two-sided test while its own docstring claimed parity with the one-sided library version.
+The detector is exposed here precisely so the tail is an argument a caller states, rather
+than a detail buried in a copy that can drift.</p>
+</div>
+<p><strong>Prefer calling over retyping.</strong> A numerical rule that is easier to retype than to reuse will
+be retyped, and the copy will diverge from its docstring without anyone noticing. That is why
+<code>repair_band_artifacts</code> calls this function rather than restating it — the rule has exactly one
+implementation — and why it accepts channel-averaged input (see below) rather than forcing a
+fork on anyone whose array is shaped differently.</p>
 <h3 id="repair_band_artifacts"><code>repair_band_artifacts</code><a class="headerlink" href="#repair_band_artifacts" title="Permanent link">&para;</a></h3>
 <p>Extends artifact repair into the time-frequency domain across canonical frequency bands:</p>
 <div class="highlight"><pre><span></span><code><span class="c1"># power: (n_trials, n_channels, n_freqs, n_times)</span>
@@ -1461,6 +1542,13 @@
     <span class="n">z_thresh</span><span class="o">=</span><span class="mf">5.0</span>
 <span class="p">)</span>
 </code></pre></div>
+<p>Channel-averaged power is accepted directly — pass <code>(n_trials, n_freqs, n_times)</code> and the same
+reduced shape comes back:</p>
+<div class="highlight"><pre><span></span><code><span class="n">repaired_avg</span><span class="p">,</span> <span class="n">frac_by_band</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">repair_band_artifacts</span><span class="p">(</span><span class="n">power</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span> <span class="n">freqs</span><span class="o">=</span><span class="n">freqs</span><span class="p">)</span>
+</code></pre></div>
+<p>Both forms agree by construction: detection runs on the channel-averaged trace either way, so
+the 3-D path is the 4-D path with a length-1 channel axis, not a second implementation. Pass
+<code>sided="both"</code> only after reading the warning above.</p>
 <hr />
 <h2 id="4-api-reference-summary">4. API Reference Summary<a class="headerlink" href="#4-api-reference-summary" title="Permanent link">&para;</a></h2>
 <table>

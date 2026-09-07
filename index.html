@@ -262,6 +262,8 @@
       
         
       
+        
+      
     
     
     
@@ -379,6 +381,34 @@
   
   
     <li class="md-nav__item">
+      <a href="common_mistakes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Common Mistakes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="api/" class="md-nav__link">
         
   
@@ -414,7 +444,7 @@
   <span class="md-ellipsis">
     
   
-    AI Agent Memory
+    Recipes
   
 
     
@@ -1107,10 +1137,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#minimal-example" class="md-nav__link">
+  <a href="#example" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Minimal Example
+        Example
       
     </span>
   </a>
@@ -1118,10 +1148,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#main-pages" class="md-nav__link">
+  <a href="#guides" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Main Pages
+        Guides
       
     </span>
   </a>
@@ -1129,10 +1159,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#canonical-six-panel-visual-architecture" class="md-nav__link">
+  <a href="#figures" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Canonical Six-Panel Visual Architecture
+        Figures
       
     </span>
   </a>
@@ -1160,99 +1190,72 @@
 
 
 <h1 id="jnwb">jnwb<a class="headerlink" href="#jnwb" title="Permanent link">&para;</a></h1>
-<p><strong>Dataset-Agnostic Electrophysiology &amp; Time-Frequency Analysis</strong> — High-performance Python library for Neurodata Without Borders (NWB 2.0+) electrophysiology recordings, spectral transformations, spiking onset dynamics, and statistical inference.</p>
-<p><strong>Scientific grammar:</strong> Raw NWB / Arrays → Addressing &amp; QC → Signal &amp; Spectral → Dynamics &amp; Spikes → Statistical Nulls → Directionality &amp; RSA</p>
-<p><strong>Execution grammar:</strong> <code>Query / Addressing</code> → <code>Extraction</code> → <code>Preprocessing / Repair</code> → <code>Estimator</code> → <code>Permutation / Bootstrap</code> → <code>Figure / Verification</code></p>
-<p>All algorithms are mathematically bounded, dataset-agnostic, and guaranteed to operate without condition leakage or hardcoded experiment heuristics.</p>
-<p><a href="01_architecture_and_philosophy/">Scope &amp; status</a> · <a href="api/">Public API contract</a> (101 symbols) · <a href="memory/">Agent Guidance</a></p>
-<hr />
+<p>Dataset-agnostic Python library for Neurodata Without Borders (NWB 2.0+) electrophysiology: addressing, spikes, LFP, spectral analysis, statistics, population methods, decoding, connectivity, laminar CSD, filtering, QC, and visualization.</p>
+<p>Condition codes, task structure, and experimental hypotheses belong in project code. The library operates on NWB files, numeric arrays, and metadata tables.</p>
+<p><a href="01_architecture_and_philosophy/">Architecture</a> · <a href="api/">Public API</a> (111 symbols) · <a href="common_mistakes/">Common mistakes</a></p>
 <h2 id="install">Install<a class="headerlink" href="#install" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>-U<span class="w"> </span>jnwb
-pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;jnwb[torch,gpu]&quot;</span><span class="w">   </span><span class="c1"># optional CuPy / PyTorch GPU acceleration</span>
+pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"jnwb[torch,gpu]"</span><span class="w">   </span><span class="c1"># optional CuPy / PyTorch</span>
 </code></pre></div>
-<h2 id="minimal-example">Minimal Example<a class="headerlink" href="#minimal-example" title="Permanent link">&para;</a></h2>
-<p>Compute time-frequency representation (TFR) and band power on continuous electrophysiology:</p>
+<p>Python 3.12 only. See <a href="install/">Installation</a>.</p>
+<h2 id="example">Example<a class="headerlink" href="#example" title="Permanent link">&para;</a></h2>
+<p>Welch PSD and canonical-band power on a synthetic oscillation:</p>
 <div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">jnwb</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 
-<span class="c1"># Generate a synthetic neural signal with a 20 Hz oscillation</span>
 <span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
 <span class="n">fs</span> <span class="o">=</span> <span class="mf">1000.0</span>
 <span class="n">time</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1000</span><span class="p">)</span> <span class="o">/</span> <span class="n">fs</span>
 <span class="n">signal</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="mf">20.0</span> <span class="o">*</span> <span class="n">time</span><span class="p">)</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">rng</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
 
-<span class="c1"># Compute multitaper / Welch power spectral density</span>
 <span class="n">freqs</span><span class="p">,</span> <span class="n">psd</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">compute_psd</span><span class="p">(</span><span class="n">signal</span><span class="p">,</span> <span class="n">fs</span><span class="o">=</span><span class="n">fs</span><span class="p">)</span>
-
-<span class="c1"># Extract band power in the beta range (14-30 Hz)</span>
-<span class="n">beta_power</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">band_power</span><span class="p">(</span><span class="n">signal</span><span class="p">,</span> <span class="n">sampling_rate</span><span class="o">=</span><span class="n">fs</span><span class="p">,</span> <span class="n">freq_range</span><span class="o">=</span><span class="p">(</span><span class="mf">14.0</span><span class="p">,</span> <span class="mf">30.0</span><span class="p">))</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Beta band power: </span><span class="si">{</span><span class="n">beta_power</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="n">beta_power</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">band_power</span><span class="p">(</span><span class="n">signal</span><span class="p">,</span> <span class="n">fs</span><span class="o">=</span><span class="n">fs</span><span class="p">,</span> <span class="n">freq_range</span><span class="o">=</span><span class="p">(</span><span class="mf">14.0</span><span class="p">,</span> <span class="mf">30.0</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Beta band power: </span><span class="si">{</span><span class="n">beta_power</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </code></pre></div>
-<blockquote>
-<p><strong>Dataset Independence Invariant:</strong> <code>jnwb</code> contains zero hardcoded experiment condition names, session IDs, or manuscript findings. All analysis logic accepts generic numeric arrays or standardized NWB data containers.</p>
-</blockquote>
-<hr />
-<h2 id="main-pages">Main Pages<a class="headerlink" href="#main-pages" title="Permanent link">&para;</a></h2>
+<h2 id="guides">Guides<a class="headerlink" href="#guides" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="quickstart/">Quickstart</a> — 6-primitive runnable tour and visual architecture</li>
-<li><a href="install/">Installation</a> — package setup, hardware backends, and verification</li>
-<li><a href="01_architecture_and_philosophy/">Architecture &amp; Philosophy</a> — design doctrine and frozen boundaries</li>
-<li><a href="02_paths_addressing_metadata/">Addressing &amp; Metadata</a> — probe geometry and unit quality metrics</li>
-<li><a href="api/">Public API Reference</a> — 101 public symbols organized by domain</li>
-<li><a href="12_interactive_analyses/">Interactive Analyses</a> — end-to-end interactive workflows</li>
-<li><a href="memory/">AI Agent Guidance</a> — operational constraints and mechanical gates</li>
+<li><a href="quickstart/">Quickstart</a> — runnable tour of core primitives</li>
+<li><a href="install/">Installation</a> — setup and verification</li>
+<li><a href="01_architecture_and_philosophy/">Architecture</a> — scope, units, and dataset independence</li>
+<li><a href="02_paths_addressing_metadata/">Addressing &amp; metadata</a></li>
+<li><a href="api/">Public API</a> — 111 exported symbols</li>
+<li><a href="12_interactive_analyses/">Interactive analyses</a> — hosted analysis atlas (separate from this package docs)</li>
+<li><a href="memory/">Recipes</a> — longer worked examples</li>
 </ul>
-<hr />
-<h2 id="canonical-six-panel-visual-architecture">Canonical Six-Panel Visual Architecture<a class="headerlink" href="#canonical-six-panel-visual-architecture" title="Permanent link">&para;</a></h2>
-<p>The <code>jnwb</code> diagnostic suite provides a unified 6-panel visual grammar verifying the six core pillars of electrophysiological data science:</p>
+<h2 id="figures">Figures<a class="headerlink" href="#figures" title="Permanent link">&para;</a></h2>
+<p>Synthetic, deterministic examples generated by <code>docs/generate_figures.py</code> from public APIs:</p>
 <table>
   <tr>
     <td align="center" width="50%">
-      <a href="quickstart.md#1-artifact-detection-repair">
-        <img src="assets/jnwb_quickstart.png" alt="Artifact Detection & Repair" width="100%">
-      </a><br>
-      <sub><b>1. Artifact Repair</b> (OBSERVED): Trial-level artifact detection & interpolation</sub>
+      <img src="assets/figures/fig10_artifact_repair.png" alt="Artifact repair" width="100%">
+      <sub>Artifact detection and trial repair</sub>
     </td>
     <td align="center" width="50%">
-      <a href="quickstart.md#2-time-frequency-dynamics-complex-morlet-tfr">
-        <img src="assets/jnwb_quickstart.png" alt="Time-Frequency Representation" width="100%">
-      </a><br>
-      <sub><b>2. Spectral Dynamics</b> (DERIVED): Complex Morlet wavelet time-frequency decomposition</sub>
+      <img src="assets/figures/fig05_complex_tfr_coi.png" alt="Complex TFR with COI" width="100%">
+      <sub>Morlet TFR and cone of influence</sub>
     </td>
   </tr>
   <tr>
     <td align="center" width="50%">
-      <a href="quickstart.md#3-directed-information-flow-phase-slope-index">
-        <img src="assets/jnwb_quickstart.png" alt="Directed Connectivity" width="100%">
-      </a><br>
-      <sub><b>3. Directed Interaction</b> (DERIVED): Phase slope index with surrogate significance</sub>
+      <img src="assets/figures/fig09_directed_connectivity.png" alt="Directed connectivity" width="100%">
+      <sub>Directed connectivity</sub>
     </td>
     <td align="center" width="50%">
-      <a href="quickstart.md#4-spiking-psth-onset-dynamics">
-        <img src="assets/jnwb_quickstart.png" alt="Spiking Dynamics" width="100%">
-      </a><br>
-      <sub><b>4. Spiking Latencies</b> (DERIVED): PSTH bootstrap and exponential onset fitting</sub>
+      <img src="assets/figures/fig03_onset_fitting.png" alt="Onset fitting" width="100%">
+      <sub>PSTH and exponential onset fit</sub>
     </td>
   </tr>
   <tr>
     <td align="center" width="50%">
-      <a href="quickstart.md#5-non-parametric-statistical-testing">
-        <img src="assets/jnwb_quickstart.png" alt="Statistical Testing" width="100%">
-      </a><br>
-      <sub><b>5. Hypothesis Testing</b> (DERIVED): Non-parametric permutation tests and Clopper-Pearson CIs</sub>
+      <img src="assets/figures/fig08_permutation_null.png" alt="Permutation null" width="100%">
+      <sub>Permutation nulls</sub>
     </td>
     <td align="center" width="50%">
-      <a href="quickstart.md#6-joint-representational-similarity-jrsa">
-        <img src="assets/jnwb_quickstart.png" alt="Representational Geometry" width="100%">
-      </a><br>
-      <sub><b>6. Representational Geometry</b> (DERIVED): Cross-modal representational similarity analysis</sub>
+      <img src="assets/figures/fig07_population_decoding.png" alt="Population decoding" width="100%">
+      <sub>Nested-CV linear decoding</sub>
     </td>
   </tr>
 </table>
-
-<p>Generate the complete standalone diagnostic figure locally with one line:</p>
-<div class="highlight"><pre><span></span><code>python<span class="w"> </span>examples/quickstart_jnwb.py
-</code></pre></div>
 
 
 

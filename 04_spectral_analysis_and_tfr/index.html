@@ -262,6 +262,8 @@
       
         
       
+        
+      
     
     
     
@@ -379,6 +381,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../common_mistakes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Common Mistakes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../api/" class="md-nav__link">
         
   
@@ -414,7 +444,7 @@
   <span class="md-ellipsis">
     
   
-    AI Agent Memory
+    Recipes
   
 
     
@@ -673,10 +703,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#power-spectral-density-compute_psd-band-power-band_power" class="md-nav__link">
+  <a href="#power-spectral-density-compute_psd-compute_multitaper_psd-band-power-band_power" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Power Spectral Density (compute_psd) &amp; Band Power (band_power)
+        Power Spectral Density (compute_psd, compute_multitaper_psd) &amp; Band Power (band_power)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decibel-formation-aggregate_to_db-to_db-db_aggregations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decibel Formation (aggregate_to_db, to_db, DB_AGGREGATIONS)
       
     </span>
   </a>
@@ -688,6 +729,17 @@
     <span class="md-ellipsis">
       
         Spectral Tilt, Harmonic Analysis &amp; Referencing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#digital-filtering-bandpass_filter-notch_filter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Digital Filtering (bandpass_filter, notch_filter)
       
     </span>
   </a>
@@ -1352,10 +1404,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#power-spectral-density-compute_psd-band-power-band_power" class="md-nav__link">
+  <a href="#power-spectral-density-compute_psd-compute_multitaper_psd-band-power-band_power" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Power Spectral Density (compute_psd) &amp; Band Power (band_power)
+        Power Spectral Density (compute_psd, compute_multitaper_psd) &amp; Band Power (band_power)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decibel-formation-aggregate_to_db-to_db-db_aggregations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decibel Formation (aggregate_to_db, to_db, DB_AGGREGATIONS)
       
     </span>
   </a>
@@ -1367,6 +1430,17 @@
     <span class="md-ellipsis">
       
         Spectral Tilt, Harmonic Analysis &amp; Referencing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#digital-filtering-bandpass_filter-notch_filter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Digital Filtering (bandpass_filter, notch_filter)
       
     </span>
   </a>
@@ -1549,24 +1623,96 @@
 <span class="c1"># - low_gamma: (30.0, 50.0) Hz</span>
 <span class="c1"># - high_gamma: (50.0, 80.0) Hz</span>
 </code></pre></div>
-<h3 id="power-spectral-density-compute_psd-band-power-band_power">Power Spectral Density (<code>compute_psd</code>) &amp; Band Power (<code>band_power</code>)<a class="headerlink" href="#power-spectral-density-compute_psd-band-power-band_power" title="Permanent link">&para;</a></h3>
+<h3 id="power-spectral-density-compute_psd-compute_multitaper_psd-band-power-band_power">Power Spectral Density (<code>compute_psd</code>, <code>compute_multitaper_psd</code>) &amp; Band Power (<code>band_power</code>)<a class="headerlink" href="#power-spectral-density-compute_psd-compute_multitaper_psd-band-power-band_power" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><span class="c1"># Compute Welch PSD (returns frequencies and psd arrays)</span>
 <span class="n">freqs</span><span class="p">,</span> <span class="n">psd</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">compute_psd</span><span class="p">(</span><span class="n">lfp_trace</span><span class="p">,</span> <span class="n">fs</span><span class="o">=</span><span class="mf">1000.0</span><span class="p">)</span>
 
+<span class="c1"># Compute DPSS multitaper PSD with explicit energy normalization</span>
+<span class="c1"># nw: time-half-bandwidth product; k_tapers defaults to int(2*nw - 1)</span>
+<span class="n">freqs_mt</span><span class="p">,</span> <span class="n">psd_mt</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">compute_multitaper_psd</span><span class="p">(</span><span class="n">lfp_trace</span><span class="p">,</span> <span class="n">fs</span><span class="o">=</span><span class="mf">1000.0</span><span class="p">,</span> <span class="n">nw</span><span class="o">=</span><span class="mf">3.0</span><span class="p">,</span> <span class="n">k_tapers</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+
 <span class="c1"># Extract scalar mean power in a specific frequency range (e.g. beta: 14-30 Hz)</span>
-<span class="n">beta_power_val</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">band_power</span><span class="p">(</span><span class="n">lfp_trace</span><span class="p">,</span> <span class="n">sampling_rate</span><span class="o">=</span><span class="mf">1000.0</span><span class="p">,</span> <span class="n">freq_range</span><span class="o">=</span><span class="p">(</span><span class="mf">14.0</span><span class="p">,</span> <span class="mf">30.0</span><span class="p">))</span>
+<span class="n">beta_power_val</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">band_power</span><span class="p">(</span><span class="n">lfp_trace</span><span class="p">,</span> <span class="n">fs</span><span class="o">=</span><span class="mf">1000.0</span><span class="p">,</span> <span class="n">freq_range</span><span class="o">=</span><span class="p">(</span><span class="mf">14.0</span><span class="p">,</span> <span class="mf">30.0</span><span class="p">))</span>
 </code></pre></div>
+<h3 id="decibel-formation-aggregate_to_db-to_db-db_aggregations">Decibel Formation (<code>aggregate_to_db</code>, <code>to_db</code>, <code>DB_AGGREGATIONS</code>)<a class="headerlink" href="#decibel-formation-aggregate_to_db-to_db-db_aggregations" title="Permanent link">&para;</a></h3>
+<p>Take the logarithm <strong>last</strong>. Form the per-unit ratio <code>P / P0</code>, aggregate the <em>ratios</em>, and
+convert once. Averaging decibels is a Jensen error -- <code>mean(log x) != log(mean x)</code> -- and it
+biases every unit by its own noisiness, so a noisier channel is pulled toward a different
+answer than a quiet one measuring the same effect.</p>
+<p><code>to_db(ratio)</code> is the bare conversion and cannot enforce anything: by the time a caller holds
+decibels, the mistake is already available. <code>aggregate_to_db</code> is the enforcing form -- it owns
+the whole ratio-aggregate-log sequence, so the correct order is the only order reachable
+through it.</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># power, baseline: (n_units, n_trials), ratio-scale and non-negative</span>
+<span class="n">db</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">aggregate_to_db</span><span class="p">(</span><span class="n">power</span><span class="p">,</span> <span class="n">baseline</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s2">"mean_of_ratios"</span><span class="p">,</span> <span class="n">aggregate_over</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+<span class="c1"># Element-wise conversion, no aggregation -- still logs exactly once</span>
+<span class="n">db_per_trial</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">aggregate_to_db</span><span class="p">(</span><span class="n">power</span><span class="p">,</span> <span class="n">baseline</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s2">"mean_of_ratios"</span><span class="p">)</span>
+</code></pre></div>
+<p><strong><code>how</code> has no default, on purpose.</strong> The two members of <code>DB_AGGREGATIONS</code> are different
+estimands, not implementation details:</p>
+<table>
+<thead>
+<tr>
+<th><code>how</code></th>
+<th>Estimand</th>
+<th>Weighting</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>"mean_of_ratios"</code></td>
+<td>mean of each unit's own ratio</td>
+<td>every unit counts equally</td>
+</tr>
+<tr>
+<td><code>"ratio_of_means"</code></td>
+<td>summed power over summed baseline</td>
+<td>each unit weighted by its baseline power</td>
+</tr>
+</tbody>
+</table>
+<p>They coincide only when the baseline is constant across the aggregated axis. In general
+<code>sum_c P_c / sum_c P0_c = sum_c w_c (P_c / P0_c)</code> with <code>w_c = P0_c / sum_j P0_j</code>, so
+<code>"ratio_of_means"</code> is a baseline-weighted version of the very same per-unit ratios. A silent
+default would pick one of these for you.</p>
+<p><strong>Geometric mean is deliberately rejected</strong> rather than offered as a third option, because
+<code>10*log10(geomean(r))</code> is <em>identically</em> <code>mean(10*log10(r))</code> -- it is mean-of-decibels wearing a
+respectable name. Passing <code>how="geomean"</code> raises and says so.</p>
+<p><strong>Negative input raises.</strong> Ratio-scale power is non-negative by definition, whereas decibel
+arrays routinely carry negative values, so handing decibels to this function usually fails
+loudly instead of returning a plausible wrong number. Treat that as a guard, not a proof: an
+all-positive decibel array is indistinguishable from power by inspection, so the contract still
+stands -- pass power and baseline, never decibels.</p>
+<p><code>nan_policy="omit"</code> aggregates over non-NaN entries only. Artifact repair legitimately leaves
+NaNs behind, so this is a real choice, but never a silent one.</p>
+<p><img alt="Power Ratio Aggregation and Log-Last Rule" src="../assets/figures/fig06_aggregate_to_db.png" /></p>
 <h3 id="spectral-tilt-harmonic-analysis-referencing">Spectral Tilt, Harmonic Analysis &amp; Referencing<a class="headerlink" href="#spectral-tilt-harmonic-analysis-referencing" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><span class="c1"># Estimate 1/f spectral tilt / exponent</span>
-<span class="n">tilt_res</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">spectral_tilt</span><span class="p">(</span><span class="n">lfp_trace</span><span class="p">,</span> <span class="n">sampling_rate</span><span class="o">=</span><span class="mf">1000.0</span><span class="p">,</span> <span class="n">freq_range</span><span class="o">=</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">100.0</span><span class="p">))</span>
+<span class="n">tilt_res</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">spectral_tilt</span><span class="p">(</span><span class="n">lfp_trace</span><span class="p">,</span> <span class="n">fs</span><span class="o">=</span><span class="mf">1000.0</span><span class="p">,</span> <span class="n">freq_range</span><span class="o">=</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">100.0</span><span class="p">))</span>
 
 <span class="c1"># Harmonic distortion analysis</span>
-<span class="n">harmonics</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">harmonic_analysis</span><span class="p">(</span><span class="n">lfp_trace</span><span class="p">,</span> <span class="n">sampling_rate</span><span class="o">=</span><span class="mf">1000.0</span><span class="p">,</span> <span class="n">harmonic_orders</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+<span class="n">harmonics</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">harmonic_analysis</span><span class="p">(</span><span class="n">lfp_trace</span><span class="p">,</span> <span class="n">fs</span><span class="o">=</span><span class="mf">1000.0</span><span class="p">,</span> <span class="n">harmonic_orders</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
 
 <span class="c1"># Spatial referencing schemes</span>
 <span class="n">bipolar_data</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">bipolar_reference</span><span class="p">(</span><span class="n">lfp_multichannel</span><span class="p">)</span>
 <span class="n">laplacian_data</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">laplacian_reference</span><span class="p">(</span><span class="n">lfp_multichannel</span><span class="p">)</span>
+
+<span class="c1"># 1D Voltage Curvature (d2V/dz2 in V/m^2) and Current Source Density (CSD in A/m^3)</span>
+<span class="c1"># lfp_probe: (n_channels, n_times) in Volts, ordered along probe depth</span>
+<span class="n">curv</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">voltage_curvature_1d</span><span class="p">(</span><span class="n">lfp_probe</span><span class="p">,</span> <span class="n">pitch_um</span><span class="o">=</span><span class="mf">100.0</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="c1"># CSD requires explicit extracellular conductivity (e.g. 0.3 S/m for cortex)</span>
+<span class="n">csd</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">current_source_density_1d</span><span class="p">(</span><span class="n">lfp_probe</span><span class="p">,</span> <span class="n">pitch_um</span><span class="o">=</span><span class="mf">100.0</span><span class="p">,</span> <span class="n">conductivity_s_per_m</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 </code></pre></div>
+<h3 id="digital-filtering-bandpass_filter-notch_filter">Digital Filtering (<code>bandpass_filter</code>, <code>notch_filter</code>)<a class="headerlink" href="#digital-filtering-bandpass_filter-notch_filter" title="Permanent link">&para;</a></h3>
+<p>Zero-phase (<code>zero_phase=True</code>, acausal forward-backward) and causal (<code>zero_phase=False</code>) filtering via Second-Order Sections (SOS):</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Zero-phase Butterworth bandpass filter (14-30 Hz beta band)</span>
+<span class="n">beta_lfp</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">bandpass_filter</span><span class="p">(</span><span class="n">lfp_trace</span><span class="p">,</span> <span class="n">fs</span><span class="o">=</span><span class="mf">1000.0</span><span class="p">,</span> <span class="n">low_cut</span><span class="o">=</span><span class="mf">14.0</span><span class="p">,</span> <span class="n">high_cut</span><span class="o">=</span><span class="mf">30.0</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">zero_phase</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># 60 Hz line-noise notch filter</span>
+<span class="n">clean_lfp</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">notch_filter</span><span class="p">(</span><span class="n">lfp_trace</span><span class="p">,</span> <span class="n">fs</span><span class="o">=</span><span class="mf">1000.0</span><span class="p">,</span> <span class="n">freq</span><span class="o">=</span><span class="mf">60.0</span><span class="p">,</span> <span class="n">q</span><span class="o">=</span><span class="mf">30.0</span><span class="p">,</span> <span class="n">zero_phase</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</code></pre></div>
+<p><img alt="Power Spectral Density and 1/f Aperiodic Tilt" src="../assets/figures/fig04_psd_spectral_tilt.png" /></p>
 <hr />
 <h2 id="2-cross-area-coherence-imaginary-coherency">2. Cross-Area Coherence &amp; Imaginary Coherency<a class="headerlink" href="#2-cross-area-coherence-imaginary-coherency" title="Permanent link">&para;</a></h2>
 <h3 id="cross-area-coherence-cross_area_coherence">Cross-Area Coherence (<code>cross_area_coherence</code>)<a class="headerlink" href="#cross-area-coherence-cross_area_coherence" title="Permanent link">&para;</a></h3>
@@ -1574,20 +1720,20 @@
 <div class="highlight"><pre><span></span><code><span class="n">coh_dict</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">cross_area_coherence</span><span class="p">(</span>
     <span class="n">lfp_area1</span><span class="p">,</span>
     <span class="n">lfp_area2</span><span class="p">,</span>
-    <span class="n">sampling_rate</span><span class="o">=</span><span class="mf">1000.0</span><span class="p">,</span>
+    <span class="n">fs</span><span class="o">=</span><span class="mf">1000.0</span><span class="p">,</span>
     <span class="n">freq_bands</span><span class="o">=</span><span class="n">jnwb</span><span class="o">.</span><span class="n">CANONICAL_BANDS</span>
 <span class="p">)</span>
 <span class="c1"># Returns dict containing:</span>
-<span class="c1"># - &#39;band_coherence&#39;: Dict[band_name -&gt; float]</span>
-<span class="c1"># - &#39;coherence_spectrum&#39;: np.ndarray (frequency-by-frequency coherence values)</span>
-<span class="c1"># - &#39;frequencies&#39;: np.ndarray</span>
+<span class="c1"># - 'band_coherence': Dict[band_name -&gt; float]</span>
+<span class="c1"># - 'coherence_spectrum': np.ndarray (frequency-by-frequency coherence values)</span>
+<span class="c1"># - 'frequencies': np.ndarray</span>
 </code></pre></div>
 <h3 id="imaginary-coherency-imaginary_coherency">Imaginary Coherency (<code>imaginary_coherency</code>)<a class="headerlink" href="#imaginary-coherency-imaginary_coherency" title="Permanent link">&para;</a></h3>
 <p>Computes imaginary coherency to eliminate volume conduction / zero-lag field spread artifacts:</p>
 <div class="highlight"><pre><span></span><code><span class="n">imag_coh</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">imaginary_coherency</span><span class="p">(</span>
     <span class="n">lfp_area1</span><span class="p">,</span>
     <span class="n">lfp_area2</span><span class="p">,</span>
-    <span class="n">sampling_rate</span><span class="o">=</span><span class="mf">1000.0</span><span class="p">,</span>
+    <span class="n">fs</span><span class="o">=</span><span class="mf">1000.0</span><span class="p">,</span>
     <span class="n">freq_range</span><span class="o">=</span><span class="p">(</span><span class="mf">15.0</span><span class="p">,</span> <span class="mf">30.0</span><span class="p">)</span>
 <span class="p">)</span>
 </code></pre></div>
@@ -1607,7 +1753,7 @@
 <span class="c1"># freqs: (n_freqs,) exact physical frequency coordinates in Hz</span>
 <span class="n">beta_power</span> <span class="o">=</span> <span class="n">TFRAnalyzer</span><span class="o">.</span><span class="n">extract_band</span><span class="p">(</span>
     <span class="n">tfr_data</span><span class="p">,</span>
-    <span class="n">band</span><span class="o">=</span><span class="s2">&quot;beta&quot;</span><span class="p">,</span>
+    <span class="n">band</span><span class="o">=</span><span class="s2">"beta"</span><span class="p">,</span>
     <span class="n">freqs</span><span class="o">=</span><span class="n">freqs</span><span class="p">,</span>
     <span class="n">freq_axis</span><span class="o">=</span><span class="mi">1</span>
 <span class="p">)</span>
@@ -1638,7 +1784,7 @@ $<span class="arithmatex">\(\text{RelPower}(f, t) = \frac{\bar{P}_{\text{respons
     <span class="n">fs</span><span class="o">=</span><span class="mf">1000.0</span><span class="p">,</span>
     <span class="n">freqs</span><span class="o">=</span><span class="n">freqs</span><span class="p">,</span>
     <span class="n">n_cycles</span><span class="o">=</span><span class="mf">5.0</span><span class="p">,</span>
-    <span class="n">normalization</span><span class="o">=</span><span class="s2">&quot;amplitude&quot;</span>  <span class="c1"># unit cosine yields peak |z| = 1.0</span>
+    <span class="n">normalization</span><span class="o">=</span><span class="s2">"amplitude"</span>  <span class="c1"># unit cosine yields peak |z| = 1.0</span>
 <span class="p">)</span>
 
 <span class="c1"># Returns ComplexTFR dataclass:</span>
@@ -1648,6 +1794,7 @@ $<span class="arithmatex">\(\text{RelPower}(f, t) = \frac{\bar{P}_{\text{respons
 <span class="c1"># - tfr_res.phase: np.ndarray (angle in radians)</span>
 <span class="c1"># - tfr_res.amplitude: np.ndarray (|z|)</span>
 </code></pre></div>
+<p><img alt="Complex Morlet TFR and Cone of Influence" src="../assets/figures/fig05_complex_tfr_coi.png" /></p>
 <h3 id="streaming-tfr-accumulation-tfraccumulator-compression-compress_fp32">Streaming TFR Accumulation (<code>TFRAccumulator</code>) &amp; Compression (<code>compress_fp32</code>)<a class="headerlink" href="#streaming-tfr-accumulation-tfraccumulator-compression-compress_fp32" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong><code>TFRAccumulator</code> &amp; <code>assert_mergeable</code> (<code>jnwb.tfr_accumulator</code>)</strong>: Accumulates running sums and sum-of-squares across streaming trials (<code>add_trial(tfr_res.z, valid=tfr_res.coi_mask)</code>) without storing complete trial tensors in RAM.</li>

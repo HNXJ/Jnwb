@@ -262,6 +262,8 @@
       
         
       
+        
+      
     
     
     
@@ -379,6 +381,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../common_mistakes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Common Mistakes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../api/" class="md-nav__link">
         
   
@@ -414,7 +444,7 @@
   <span class="md-ellipsis">
     
   
-    AI Agent Memory
+    Recipes
   
 
     
@@ -1428,11 +1458,11 @@
 <span class="n">result</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">jrsa</span><span class="p">(</span>
     <span class="n">x1</span><span class="p">,</span>
     <span class="n">x2</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>            <span class="c1"># If x2 is None, computes symmetric self-similarity</span>
-    <span class="n">metric</span><span class="o">=</span><span class="s2">&quot;rsa&quot;</span><span class="p">,</span>       <span class="c1"># &quot;rsa&quot;, &quot;pearson&quot;, &quot;cosine&quot;, &quot;spearman&quot;, etc.</span>
+    <span class="n">metric</span><span class="o">=</span><span class="s2">"rsa"</span><span class="p">,</span>       <span class="c1"># "rsa", "pearson", "cosine", "spearman", etc.</span>
     <span class="n">stats</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>         <span class="c1"># Enable permutation hypothesis testing</span>
     <span class="n">permutations</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span>
     <span class="n">bootstrap</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span>
-    <span class="n">correction</span><span class="o">=</span><span class="s2">&quot;fdr_bh&quot;</span><span class="p">,</span>
+    <span class="n">correction</span><span class="o">=</span><span class="s2">"fdr_bh"</span><span class="p">,</span>
     <span class="n">alpha</span><span class="o">=</span><span class="mf">0.05</span>
 <span class="p">)</span>
 
@@ -1455,7 +1485,7 @@
 <div class="highlight"><pre><span></span><code><span class="c1"># Compute sliding-window representational similarity across time</span>
 <span class="n">sliding_res</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">jrsa</span><span class="p">(</span>
     <span class="n">x1</span><span class="p">,</span> <span class="n">x2</span><span class="p">,</span>
-    <span class="n">metric</span><span class="o">=</span><span class="s2">&quot;pearson&quot;</span><span class="p">,</span>
+    <span class="n">metric</span><span class="o">=</span><span class="s2">"pearson"</span><span class="p">,</span>
     <span class="n">window</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">30</span><span class="p">),</span>
     <span class="n">sliding</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="n">lag</span><span class="o">=</span><span class="mi">5</span>
@@ -1464,7 +1494,7 @@
 <h3 id="gpu-acceleration-backend">GPU Acceleration Backend<a class="headerlink" href="#gpu-acceleration-backend" title="Permanent link">&para;</a></h3>
 <p><code>jnwb.jrsa</code> interfaces with <code>jnwb.gpu_pca</code> and CuPy for massive tensor comparisons:</p>
 <div class="highlight"><pre><span></span><code><span class="c1"># Explicitly request GPU backend</span>
-<span class="n">res_gpu</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">jrsa</span><span class="p">(</span><span class="n">x1</span><span class="p">,</span> <span class="n">x2</span><span class="p">,</span> <span class="n">metric</span><span class="o">=</span><span class="s2">&quot;rsa&quot;</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s2">&quot;gpu&quot;</span><span class="p">)</span>
+<span class="n">res_gpu</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">jrsa</span><span class="p">(</span><span class="n">x1</span><span class="p">,</span> <span class="n">x2</span><span class="p">,</span> <span class="n">metric</span><span class="o">=</span><span class="s2">"rsa"</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s2">"gpu"</span><span class="p">)</span>
 </code></pre></div>
 <hr />
 <h2 id="4-missing-condition-handling-preprocessing-invariants">4. Missing Condition Handling &amp; Preprocessing Invariants<a class="headerlink" href="#4-missing-condition-handling-preprocessing-invariants" title="Permanent link">&para;</a></h2>

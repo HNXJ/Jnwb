@@ -262,6 +262,8 @@
       
         
       
+        
+      
     
     
     
@@ -379,6 +381,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../common_mistakes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Common Mistakes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../api/" class="md-nav__link">
         
   
@@ -414,7 +444,7 @@
   <span class="md-ellipsis">
     
   
-    AI Agent Memory
+    Recipes
   
 
     
@@ -888,6 +918,17 @@
     <span class="md-ellipsis">
       
         Fast Paired &amp; Unpaired Shuffle p-values
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cluster-based-permutation-testing-cluster_permutation_test" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cluster-Based Permutation Testing (cluster_permutation_test)
       
     </span>
   </a>
@@ -1368,6 +1409,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#cluster-based-permutation-testing-cluster_permutation_test" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cluster-Based Permutation Testing (cluster_permutation_test)
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1456,8 +1508,8 @@
     <span class="n">ci</span><span class="o">=</span><span class="mf">0.95</span><span class="p">,</span>
     <span class="n">rng</span><span class="o">=</span><span class="n">custom_rng</span>
 <span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Bootstrap 95% CI:&quot;</span><span class="p">,</span> <span class="n">boot_res</span><span class="p">[</span><span class="s2">&quot;bootstrap_ci&quot;</span><span class="p">])</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Bootstrap Std Error:&quot;</span><span class="p">,</span> <span class="n">boot_res</span><span class="p">[</span><span class="s2">&quot;bootstrap_std&quot;</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"Bootstrap 95% CI:"</span><span class="p">,</span> <span class="n">boot_res</span><span class="p">[</span><span class="s2">"bootstrap_ci"</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"Bootstrap Std Error:"</span><span class="p">,</span> <span class="n">boot_res</span><span class="p">[</span><span class="s2">"bootstrap_std"</span><span class="p">])</span>
 
 <span class="c1"># Two-Sample Permutation Test</span>
 <span class="n">perm_res</span> <span class="o">=</span> <span class="n">stats</span><span class="o">.</span><span class="n">permutation_test</span><span class="p">(</span>
@@ -1466,7 +1518,7 @@
     <span class="n">n_permutations</span><span class="o">=</span><span class="mi">5000</span><span class="p">,</span>
     <span class="n">rng</span><span class="o">=</span><span class="n">custom_rng</span>
 <span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Permutation p-value:&quot;</span><span class="p">,</span> <span class="n">perm_res</span><span class="p">[</span><span class="s2">&quot;pval&quot;</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"Permutation p-value:"</span><span class="p">,</span> <span class="n">perm_res</span><span class="p">[</span><span class="s2">"pval"</span><span class="p">])</span>
 </code></pre></div>
 <hr />
 <h2 id="2-group-comparisons-false-discovery-rate-fdr-control">2. Group Comparisons &amp; False Discovery Rate (FDR) Control<a class="headerlink" href="#2-group-comparisons-false-discovery-rate-fdr-control" title="Permanent link">&para;</a></h2>
@@ -1480,13 +1532,13 @@
     <span class="n">n_bootstrap</span><span class="o">=</span><span class="mi">2000</span><span class="p">,</span>
     <span class="n">rng</span><span class="o">=</span><span class="n">custom_rng</span>
 <span class="p">)</span>
-<span class="c1"># Returns clean parametric (&#39;parametric&#39;) and non-parametric (&#39;non_parametric&#39;) metrics,</span>
+<span class="c1"># Returns clean parametric ('parametric') and non-parametric ('non_parametric') metrics,</span>
 <span class="c1"># alongside bootstrap mean difference confidence intervals.</span>
 </code></pre></div>
 <h3 id="benjamini-hochberg-fdr-control-fdr_correct">Benjamini-Hochberg FDR Control (<code>fdr_correct</code>)<a class="headerlink" href="#benjamini-hochberg-fdr-control-fdr_correct" title="Permanent link">&para;</a></h3>
 <p>For confirmatory hypothesis testing across cohorts of channels, frequency bins, or time lags, apply explicit FDR control:</p>
 <div class="highlight"><pre><span></span><code><span class="n">p_values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.001</span><span class="p">,</span> <span class="mf">0.004</span><span class="p">,</span> <span class="mf">0.015</span><span class="p">,</span> <span class="mf">0.048</span><span class="p">,</span> <span class="mf">0.120</span><span class="p">])</span>
-<span class="n">significant_mask</span><span class="p">,</span> <span class="n">p_adjusted</span> <span class="o">=</span> <span class="n">stats</span><span class="o">.</span><span class="n">fdr_correct</span><span class="p">(</span><span class="n">p_values</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;bh&quot;</span><span class="p">)</span>
+<span class="n">significant_mask</span><span class="p">,</span> <span class="n">p_adjusted</span> <span class="o">=</span> <span class="n">stats</span><span class="o">.</span><span class="n">fdr_correct</span><span class="p">(</span><span class="n">p_values</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">"bh"</span><span class="p">)</span>
 </code></pre></div>
 <hr />
 <h2 id="3-standalone-rate-extraction-paired-binary-fire-probability">3. Standalone Rate Extraction &amp; Paired Binary Fire Probability<a class="headerlink" href="#3-standalone-rate-extraction-paired-binary-fire-probability" title="Permanent link">&para;</a></h2>
@@ -1508,8 +1560,8 @@
     <span class="n">n_bootstrap</span><span class="o">=</span><span class="mi">2000</span><span class="p">,</span>
     <span class="n">rng</span><span class="o">=</span><span class="n">custom_rng</span>
 <span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Odds Ratio:&quot;</span><span class="p">,</span> <span class="n">fire_test</span><span class="p">[</span><span class="s2">&quot;odds_ratio&quot;</span><span class="p">])</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Shuffle p-value:&quot;</span><span class="p">,</span> <span class="n">fire_test</span><span class="p">[</span><span class="s2">&quot;p_value_fire_shuffle&quot;</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"Odds Ratio:"</span><span class="p">,</span> <span class="n">fire_test</span><span class="p">[</span><span class="s2">"odds_ratio"</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"Shuffle p-value:"</span><span class="p">,</span> <span class="n">fire_test</span><span class="p">[</span><span class="s2">"p_value_fire_shuffle"</span><span class="p">])</span>
 </code></pre></div>
 <h3 id="fast-paired-unpaired-shuffle-p-values">Fast Paired &amp; Unpaired Shuffle p-values<a class="headerlink" href="#fast-paired-unpaired-shuffle-p-values" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><span class="c1"># Paired shuffle test</span>
@@ -1518,6 +1570,36 @@
 <span class="c1"># Unpaired shuffle test</span>
 <span class="n">diff</span><span class="p">,</span> <span class="n">p_val_unpaired</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">shuffle_pvalue_unpaired</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">n_shuffles</span><span class="o">=</span><span class="mi">5000</span><span class="p">,</span> <span class="n">rng</span><span class="o">=</span><span class="n">custom_rng</span><span class="p">)</span>
 </code></pre></div>
+<h3 id="cluster-based-permutation-testing-cluster_permutation_test">Cluster-Based Permutation Testing (<code>cluster_permutation_test</code>)<a class="headerlink" href="#cluster-based-permutation-testing-cluster_permutation_test" title="Permanent link">&para;</a></h3>
+<p>For continuous time series, spectra, and time-frequency representations (TFRs), mass-univariate testing creates severe multiple testing problems. <code>jnwb.cluster_permutation_test</code> implements Maris &amp; Oostenveld (2007) non-parametric cluster-based permutation testing with maximum-cluster FWER control and exact finite Monte Carlo p-values:</p>
+<div class="arithmatex">\[p = \frac{1 + k}{B + 1}\]</div>
+<div class="highlight"><pre><span></span><code><span class="c1"># X, Y: (n_trials, n_freqs, n_times) or (n_trials, n_times)</span>
+<span class="c1"># 1. Paired differences (sign-flip exchangeability)</span>
+<span class="n">res_paired</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">cluster_permutation_test</span><span class="p">(</span>
+    <span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">,</span>
+    <span class="n">paired</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">threshold</span><span class="o">=</span><span class="mf">2.5</span><span class="p">,</span>        <span class="c1"># Point-wise t-statistic threshold for cluster formation</span>
+    <span class="n">n_permutations</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span>  <span class="c1"># Monte Carlo permutations</span>
+    <span class="n">tail</span><span class="o">=</span><span class="s2">"both"</span><span class="p">,</span>          <span class="c1"># "both", "greater", or "less"</span>
+    <span class="n">rng</span><span class="o">=</span><span class="n">custom_rng</span>
+<span class="p">)</span>
+
+<span class="c1"># 2. Independent groups with within-session exchangeability restriction</span>
+<span class="c1"># (prevents false discoveries caused by session baseline differences)</span>
+<span class="n">res_grouped</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">cluster_permutation_test</span><span class="p">(</span>
+    <span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">,</span>
+    <span class="n">paired</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">groups</span><span class="o">=</span><span class="p">(</span><span class="n">session_X</span><span class="p">,</span> <span class="n">session_Y</span><span class="p">),</span>
+    <span class="n">scheme</span><span class="o">=</span><span class="s2">"within_group"</span><span class="p">,</span>
+    <span class="n">threshold</span><span class="o">=</span><span class="mf">2.5</span><span class="p">,</span>
+    <span class="n">n_permutations</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span>
+    <span class="n">rng</span><span class="o">=</span><span class="n">custom_rng</span>
+<span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Identified </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">res_grouped</span><span class="p">[</span><span class="s1">'clusters'</span><span class="p">])</span><span class="si">}</span><span class="s2"> clusters."</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">res_grouped</span><span class="p">[</span><span class="s2">"clusters"</span><span class="p">]:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Cluster mass: </span><span class="si">{</span><span class="n">c</span><span class="p">[</span><span class="s1">'statistic'</span><span class="p">]</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">, p-value: </span><span class="si">{</span><span class="n">c</span><span class="p">[</span><span class="s1">'p_value'</span><span class="p">]</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</code></pre></div>
 <hr />
 <h2 id="4-exchangeable-label-permutation-schemes-jnwbpermutation">4. Exchangeable Label Permutation Schemes (<code>jnwb.permutation</code>)<a class="headerlink" href="#4-exchangeable-label-permutation-schemes-jnwbpermutation" title="Permanent link">&para;</a></h2>
 <h3 id="the-grouped-exchangeability-invariant">The Grouped Exchangeability Invariant<a class="headerlink" href="#the-grouped-exchangeability-invariant" title="Permanent link">&para;</a></h3>
@@ -1525,14 +1607,14 @@
 <p><code>jnwb.permute_labels</code> requires callers to explicitly specify the permutation <code>scheme</code>:</p>
 <div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">jnwb</span>
 
-<span class="n">labels</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="s2">&quot;A&quot;</span><span class="p">,</span> <span class="s2">&quot;B&quot;</span><span class="p">,</span> <span class="s2">&quot;A&quot;</span><span class="p">,</span> <span class="s2">&quot;B&quot;</span><span class="p">,</span> <span class="s2">&quot;A&quot;</span><span class="p">,</span> <span class="s2">&quot;B&quot;</span><span class="p">])</span>
+<span class="n">labels</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="s2">"A"</span><span class="p">,</span> <span class="s2">"B"</span><span class="p">,</span> <span class="s2">"A"</span><span class="p">,</span> <span class="s2">"B"</span><span class="p">,</span> <span class="s2">"A"</span><span class="p">,</span> <span class="s2">"B"</span><span class="p">])</span>
 <span class="n">cycle_id</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
 
 <span class="c1"># Within-group exchangeability: shuffles labels ONLY within each cycle/block</span>
 <span class="n">null_labels</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">permute_labels</span><span class="p">(</span>
     <span class="n">labels</span><span class="p">,</span>
     <span class="n">groups</span><span class="o">=</span><span class="n">cycle_id</span><span class="p">,</span>
-    <span class="n">scheme</span><span class="o">=</span><span class="s2">&quot;within_group&quot;</span><span class="p">,</span>
+    <span class="n">scheme</span><span class="o">=</span><span class="s2">"within_group"</span><span class="p">,</span>
     <span class="n">rng</span><span class="o">=</span><span class="n">custom_rng</span>
 <span class="p">)</span>
 
@@ -1541,10 +1623,11 @@
     <span class="n">n_samples</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">labels</span><span class="p">),</span>
     <span class="n">n_permutations</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span>
     <span class="n">groups</span><span class="o">=</span><span class="n">cycle_id</span><span class="p">,</span>
-    <span class="n">scheme</span><span class="o">=</span><span class="s2">&quot;within_group&quot;</span><span class="p">,</span>
+    <span class="n">scheme</span><span class="o">=</span><span class="s2">"within_group"</span><span class="p">,</span>
     <span class="n">rng</span><span class="o">=</span><span class="n">custom_rng</span>
 <span class="p">)</span>
 </code></pre></div>
+<p><img alt="Exchangeable Permutation Null Distribution" src="../assets/figures/fig08_permutation_null.png" /></p>
 <hr />
 <h2 id="5-trial-cycle-detection-subblock-stratification-cross-modal-comparison">5. Trial Cycle Detection, Subblock Stratification &amp; Cross-Modal Comparison<a class="headerlink" href="#5-trial-cycle-detection-subblock-stratification-cross-modal-comparison" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><span class="c1"># Detect periodic stimulus cycles in trial tables</span>

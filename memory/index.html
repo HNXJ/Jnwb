@@ -27,7 +27,7 @@
     
     
       
-        <title>AI Agent Memory - jnwb</title>
+        <title>Recipes - jnwb</title>
       
     
     
@@ -115,7 +115,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              AI Agent Memory
+              Recipes
             
           </span>
         </div>
@@ -264,6 +264,8 @@
       
         
       
+        
+      
     
     
     
@@ -381,6 +383,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../common_mistakes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Common Mistakes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../api/" class="md-nav__link">
         
   
@@ -425,7 +455,7 @@
   <span class="md-ellipsis">
     
   
-    AI Agent Memory
+    Recipes
   
 
     
@@ -443,7 +473,7 @@
   <span class="md-ellipsis">
     
   
-    AI Agent Memory
+    Recipes
   
 
     
@@ -1395,14 +1425,14 @@
 <li>Do not describe directional metrics with physical or interventionist causal verbs.</li>
 <li><strong>Logarithm-Last Rule</strong>: When raw power conservation across trials is the estimand, average raw power across trials first, then take the decibel logarithm at the final reporting step.</li>
 <li><strong>RNG Reproducibility</strong>: Never mutate global seeds. Always pass an explicit numpy.random.Generator (e.g. rng = np.random.default_rng(seed)).</li>
-<li><strong>Public API Contract</strong>: Exactly 101 public symbols are exported in jnwb.<strong>all</strong>. Never break or alter existing public signatures without an approved transition plan.</li>
+<li><strong>Public API Contract</strong>: Exactly 105 public symbols are exported in jnwb.<strong>all</strong>. Never break or alter existing public signatures without an approved transition plan.</li>
 </ol>
 <h2 id="nwb-metadata-and-addressing-recipe">NWB Metadata and Addressing Recipe<a class="headerlink" href="#nwb-metadata-and-addressing-recipe" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">jnwb</span>
 
 <span class="c1"># 1. Read unit metadata and electrode inventories</span>
-<span class="n">units_df</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">get_all_units_metadata</span><span class="p">(</span><span class="s2">&quot;session.nwb&quot;</span><span class="p">)</span>
-<span class="n">electrodes_df</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">electrode_inventory</span><span class="p">(</span><span class="s2">&quot;session.nwb&quot;</span><span class="p">)</span>
+<span class="n">units_df</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">get_all_units_metadata</span><span class="p">(</span><span class="s2">"session.nwb"</span><span class="p">)</span>
+<span class="n">electrodes_df</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">electrode_inventory</span><span class="p">(</span><span class="s2">"session.nwb"</span><span class="p">)</span>
 
 <span class="c1"># 2. Enrich units with standardized area and layer assignments</span>
 <span class="n">enriched_units</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">enrich_units_dataframe</span><span class="p">(</span><span class="n">units_df</span><span class="p">,</span> <span class="n">electrodes_df</span><span class="p">)</span>
@@ -1433,7 +1463,7 @@
 
 <span class="c1"># Canonical frequency band power</span>
 <span class="n">beta_power</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">band_power</span><span class="p">(</span>
-    <span class="n">lfp_data</span><span class="p">,</span> <span class="n">sampling_rate</span><span class="o">=</span><span class="mf">1000.0</span><span class="p">,</span> <span class="n">freq_range</span><span class="o">=</span><span class="n">jnwb</span><span class="o">.</span><span class="n">CANONICAL_BANDS</span><span class="p">[</span><span class="s2">&quot;beta&quot;</span><span class="p">]</span>
+    <span class="n">lfp_data</span><span class="p">,</span> <span class="n">sampling_rate</span><span class="o">=</span><span class="mf">1000.0</span><span class="p">,</span> <span class="n">freq_range</span><span class="o">=</span><span class="n">jnwb</span><span class="o">.</span><span class="n">CANONICAL_BANDS</span><span class="p">[</span><span class="s2">"beta"</span><span class="p">]</span>
 <span class="p">)</span>
 </code></pre></div>
 <h2 id="artifact-detection-and-robust-repair-recipe">Artifact Detection and Robust Repair Recipe<a class="headerlink" href="#artifact-detection-and-robust-repair-recipe" title="Permanent link">&para;</a></h2>
@@ -1474,7 +1504,7 @@
 <span class="n">jnwb</span><span class="o">.</span><span class="n">setup_vector_graphics</span><span class="p">()</span>
 
 <span class="c1"># Save multi-format figure suite</span>
-<span class="n">jnwb</span><span class="o">.</span><span class="n">save_figure_suite</span><span class="p">([</span><span class="n">fig1</span><span class="p">,</span> <span class="n">fig2</span><span class="p">],</span> <span class="n">output_dir</span><span class="o">=</span><span class="s2">&quot;figures/&quot;</span><span class="p">,</span> <span class="n">basename</span><span class="o">=</span><span class="s2">&quot;fig_results&quot;</span><span class="p">)</span>
+<span class="n">jnwb</span><span class="o">.</span><span class="n">save_figure_suite</span><span class="p">([</span><span class="n">fig1</span><span class="p">,</span> <span class="n">fig2</span><span class="p">],</span> <span class="n">output_dir</span><span class="o">=</span><span class="s2">"figures/"</span><span class="p">,</span> <span class="n">basename</span><span class="o">=</span><span class="s2">"fig_results"</span><span class="p">)</span>
 </code></pre></div>
 <h2 id="gpu-acceleration-and-parallel-computation-patterns">GPU Acceleration and Parallel Computation Patterns<a class="headerlink" href="#gpu-acceleration-and-parallel-computation-patterns" title="Permanent link">&para;</a></h2>
 <ol>

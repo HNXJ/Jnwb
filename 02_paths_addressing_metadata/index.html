@@ -262,6 +262,8 @@
       
         
       
+        
+      
     
     
     
@@ -379,6 +381,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../common_mistakes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Common Mistakes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../api/" class="md-nav__link">
         
   
@@ -414,7 +444,7 @@
   <span class="md-ellipsis">
     
   
-    AI Agent Memory
+    Recipes
   
 
     
@@ -1481,7 +1511,7 @@
 <span class="n">artifacts</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">paths</span><span class="o">.</span><span class="n">artifacts_dir</span><span class="p">()</span>
 
 <span class="c1"># Resolve a registered data root</span>
-<span class="n">nwb_dir</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">paths</span><span class="o">.</span><span class="n">get_path</span><span class="p">(</span><span class="s2">&quot;nwb_dir&quot;</span><span class="p">)</span>
+<span class="n">nwb_dir</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">paths</span><span class="o">.</span><span class="n">get_path</span><span class="p">(</span><span class="s2">"nwb_dir"</span><span class="p">)</span>
 </code></pre></div>
 <h3 id="environment-variable-mapping">Environment Variable Mapping<a class="headerlink" href="#environment-variable-mapping" title="Permanent link">&para;</a></h3>
 <p>Paths are configured via environment variables rather than source code edits:</p>
@@ -1509,14 +1539,14 @@
 </tr>
 <tr>
 <td><code>outputs</code></td>
-<td><code>JNWB_OUTPUTS_DIR</code></td>
-<td><code>&lt;repo_root&gt;/outputs</code></td>
+<td><code>JNWB_OUTPUTS_DIR</code> / <code>OMISSION_OUTPUTS_DIR</code></td>
+<td><code>&lt;cwd&gt;/outputs</code></td>
 <td>Processed tables, analysis summaries</td>
 </tr>
 <tr>
 <td><code>artifacts</code></td>
-<td><code>JNWB_ARTIFACTS_DIR</code></td>
-<td><code>&lt;repo_root&gt;/artifacts</code></td>
+<td><code>JNWB_ARTIFACTS_DIR</code> / <code>OMISSION_ARTIFACTS_DIR</code></td>
+<td><code>&lt;cwd&gt;/artifacts</code></td>
 <td>Evidence logs, metadata sidecars</td>
 </tr>
 </tbody>
@@ -1532,36 +1562,37 @@
 </code></pre></div>
 <h3 id="depth-to-layer-laminar-resolution-classify_layer_from_depth">Depth-to-Layer (Laminar) Resolution (<code>classify_layer_from_depth</code>)<a class="headerlink" href="#depth-to-layer-laminar-resolution-classify_layer_from_depth" title="Permanent link">&para;</a></h3>
 <p>Translates probe electrode depth (<span class="arithmatex">\(z\)</span>-coordinate in <span class="arithmatex">\(\mu\text{m}\)</span>) into cortical layer classification:</p>
-<div class="highlight"><pre><span></span><code><span class="c1"># Classifies layer based on electrode z depth (&#39;Superficial&#39; for &lt;= 1000 um, &#39;Deep&#39; for &gt; 1000 um)</span>
+<div class="highlight"><pre><span></span><code><span class="c1"># Classifies layer based on electrode z depth ('Superficial' for &lt;= 1000 um, 'Deep' for &gt; 1000 um)</span>
 <span class="n">layer</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">classify_layer_from_depth</span><span class="p">(</span><span class="n">peak_channel_id</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">electrodes_df</span><span class="o">=</span><span class="n">electrodes_df</span><span class="p">)</span>
-<span class="c1"># Returns: &#39;Superficial&#39;, &#39;Deep&#39;, or &#39;Unknown&#39;</span>
+<span class="c1"># Returns: 'Superficial', 'Deep', or 'Unknown'</span>
 </code></pre></div>
 <h3 id="enriching-units-dataframe-enrich_units_dataframe">Enriching Units DataFrame (<code>enrich_units_dataframe</code>)<a class="headerlink" href="#enriching-units-dataframe-enrich_units_dataframe" title="Permanent link">&para;</a></h3>
 <p>Attaches standardized <code>unit_id</code>, <code>area</code>, and <code>layer</code> columns directly to units tables:</p>
 <div class="highlight"><pre><span></span><code><span class="n">enriched_units</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">enrich_units_dataframe</span><span class="p">(</span><span class="n">units_df</span><span class="p">,</span> <span class="n">electrodes_df</span><span class="p">)</span>
 </code></pre></div>
+<p><img alt="Spatial and Laminar Addressing" src="../assets/figures/fig01_addressing_laminar.png" /></p>
 <hr />
 <h2 id="3-unit-metadata-quality-classification-census-audits-jnwbmetadatapy">3. Unit Metadata, Quality Classification &amp; Census Audits (<code>jnwb/metadata.py</code>)<a class="headerlink" href="#3-unit-metadata-quality-classification-census-audits-jnwbmetadatapy" title="Permanent link">&para;</a></h2>
 <p><code>jnwb.metadata</code> provides tools for extracting spike-sorting metadata across cohorts of NWB files, categorizing unit isolation quality, computing Signal-to-Noise Ratios (SNR), and producing census reports.</p>
 <h3 id="multi-session-metadata-extraction-classification">Multi-Session Metadata Extraction &amp; Classification<a class="headerlink" href="#multi-session-metadata-extraction-classification" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">jnwb</span>
 
-<span class="n">nwb_files</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;sub-01_ses-01.nwb&quot;</span><span class="p">,</span> <span class="s2">&quot;sub-01_ses-02.nwb&quot;</span><span class="p">]</span>
+<span class="n">nwb_files</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"sub-01_ses-01.nwb"</span><span class="p">,</span> <span class="s2">"sub-01_ses-02.nwb"</span><span class="p">]</span>
 
 <span class="c1"># Extract all units across multiple sessions into a unified pandas DataFrame</span>
 <span class="n">units_df</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">get_all_units_metadata</span><span class="p">(</span><span class="n">nwb_files</span><span class="p">,</span> <span class="n">filter_quality</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 
-<span class="c1"># Classify unit quality tiers (attaches quality_class: &#39;Good&#39;|&#39;MUA&#39;|&#39;Noise&#39;, is_valid, issue_flags)</span>
+<span class="c1"># Classify unit quality tiers (attaches quality_class: 'Good'|'MUA'|'Noise', is_valid, issue_flags)</span>
 <span class="n">classified_units</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">classify_unit_quality</span><span class="p">(</span><span class="n">units_df</span><span class="p">)</span>
 
 <span class="c1"># Generate a census summary grouped by brain area</span>
-<span class="n">census</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">unit_census_report</span><span class="p">(</span><span class="n">classified_units</span><span class="p">,</span> <span class="n">group_by</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;area&quot;</span><span class="p">])</span>
+<span class="n">census</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">unit_census_report</span><span class="p">(</span><span class="n">classified_units</span><span class="p">,</span> <span class="n">group_by</span><span class="o">=</span><span class="p">[</span><span class="s2">"area"</span><span class="p">])</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">census</span><span class="p">)</span>
 </code></pre></div>
 <h3 id="snr-analysis-quality-tiers-inventory">SNR Analysis, Quality Tiers &amp; Inventory<a class="headerlink" href="#snr-analysis-quality-tiers-inventory" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><span class="c1"># Compute SNR statistics across units</span>
 <span class="n">snr_stats</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">get_snr_analysis</span><span class="p">(</span><span class="n">classified_units</span><span class="p">,</span> <span class="n">snr_threshold</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
-<span class="c1"># -&gt; {&#39;pass_rate&#39;: 0.84, &#39;snr_mean&#39;: 4.25, &#39;snr_median&#39;: 3.90}</span>
+<span class="c1"># -&gt; {'pass_rate': 0.84, 'snr_mean': 4.25, 'snr_median': 3.90}</span>
 
 <span class="c1"># Perform comprehensive unit audit</span>
 <span class="n">unit_audit</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">audit_units</span><span class="p">(</span><span class="n">classified_units</span><span class="p">)</span>
@@ -1574,7 +1605,7 @@
 
 <span class="c1"># Assign explicit quality tier based on presence fraction and SNR</span>
 <span class="n">tier</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">assign_quality_tier</span><span class="p">(</span>
-    <span class="n">quality</span><span class="o">=</span><span class="s2">&quot;good&quot;</span><span class="p">,</span>
+    <span class="n">quality</span><span class="o">=</span><span class="s2">"good"</span><span class="p">,</span>
     <span class="n">trial_presence_fraction</span><span class="o">=</span><span class="mf">0.95</span><span class="p">,</span>
     <span class="n">snr</span><span class="o">=</span><span class="mf">4.5</span>
 <span class="p">)</span>
@@ -1584,10 +1615,10 @@
 <span class="n">good_v1_units</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">filter_by_criteria</span><span class="p">(</span>
     <span class="n">classified_units</span><span class="p">,</span>
     <span class="n">criteria</span><span class="o">=</span><span class="p">{</span>
-        <span class="s2">&quot;area&quot;</span><span class="p">:</span> <span class="s2">&quot;V1&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;firing_rate&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">60.0</span><span class="p">),</span>
-        <span class="s2">&quot;snr&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mf">2.5</span><span class="p">,</span> <span class="mf">100.0</span><span class="p">),</span>
-        <span class="s2">&quot;trial_presence_fraction&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mf">0.8</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span>
+        <span class="s2">"area"</span><span class="p">:</span> <span class="s2">"V1"</span><span class="p">,</span>
+        <span class="s2">"firing_rate"</span><span class="p">:</span> <span class="p">(</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">60.0</span><span class="p">),</span>
+        <span class="s2">"snr"</span><span class="p">:</span> <span class="p">(</span><span class="mf">2.5</span><span class="p">,</span> <span class="mf">100.0</span><span class="p">),</span>
+        <span class="s2">"trial_presence_fraction"</span><span class="p">:</span> <span class="p">(</span><span class="mf">0.8</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span>
     <span class="p">}</span>
 <span class="p">)</span>
 </code></pre></div>
@@ -1603,7 +1634,7 @@
 <div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">jnwb</span><span class="w"> </span><span class="kn">import</span> <span class="n">Query</span><span class="p">,</span> <span class="n">Dataset</span><span class="p">,</span> <span class="n">EpochCollection</span>
 
 <span class="c1"># Construct declarative dataset query</span>
-<span class="n">q</span> <span class="o">=</span> <span class="n">Query</span><span class="p">(</span><span class="n">sessions</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;ses-01&quot;</span><span class="p">,</span> <span class="s2">&quot;ses-02&quot;</span><span class="p">],</span> <span class="n">areas</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;V1&quot;</span><span class="p">,</span> <span class="s2">&quot;PFC&quot;</span><span class="p">])</span>
+<span class="n">q</span> <span class="o">=</span> <span class="n">Query</span><span class="p">(</span><span class="n">sessions</span><span class="o">=</span><span class="p">[</span><span class="s2">"ses-01"</span><span class="p">,</span> <span class="s2">"ses-02"</span><span class="p">],</span> <span class="n">areas</span><span class="o">=</span><span class="p">[</span><span class="s2">"V1"</span><span class="p">,</span> <span class="s2">"PFC"</span><span class="p">])</span>
 </code></pre></div>
 
 

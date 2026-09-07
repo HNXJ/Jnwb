@@ -16,7 +16,7 @@
         <link rel="prev" href="../install/">
       
       
-        <link rel="next" href="../api/">
+        <link rel="next" href="../common_mistakes/">
       
       
         
@@ -254,6 +254,8 @@
       
         
           
+        
+      
         
       
         
@@ -544,6 +546,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../common_mistakes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Common Mistakes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../api/" class="md-nav__link">
         
   
@@ -579,7 +609,7 @@
   <span class="md-ellipsis">
     
   
-    AI Agent Memory
+    Recipes
   
 
     
@@ -1479,15 +1509,15 @@
     <span class="n">seg</span><span class="p">[</span><span class="n">trial_idx</span><span class="p">,</span> <span class="p">:,</span> <span class="mi">300</span><span class="p">:</span><span class="mi">330</span><span class="p">]</span> <span class="o">+=</span> <span class="mf">40.0</span>
 
 <span class="n">repaired</span><span class="p">,</span> <span class="n">frac</span><span class="p">,</span> <span class="n">diag</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">repair_lfp_trials</span><span class="p">(</span><span class="n">seg</span><span class="p">,</span> <span class="n">times_ms</span><span class="o">=</span><span class="n">t</span><span class="p">,</span> <span class="n">z_thresh</span><span class="o">=</span><span class="mf">6.0</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Repaired fraction: </span><span class="si">{</span><span class="n">frac</span><span class="si">:</span><span class="s2">.1%</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Repaired fraction: </span><span class="si">{</span><span class="n">frac</span><span class="si">:</span><span class="s2">.1%</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </code></pre></div>
 <h3 id="2-time-frequency-dynamics-complex-morlet-tfr">2. Time-Frequency Dynamics (Complex Morlet TFR)<a class="headerlink" href="#2-time-frequency-dynamics-complex-morlet-tfr" title="Permanent link">&para;</a></h3>
 <p>Extract phase and power with single-trial resolution using Morlet wavelets:</p>
 <div class="highlight"><pre><span></span><code><span class="n">freqs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">6.0</span><span class="p">,</span> <span class="mf">45.0</span><span class="p">,</span> <span class="mi">30</span><span class="p">)</span>
 <span class="n">tfr</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">complex_tfr</span><span class="p">(</span><span class="n">repaired</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">fs</span><span class="o">=</span><span class="mf">1000.0</span><span class="p">,</span> <span class="n">freqs</span><span class="o">=</span><span class="n">freqs</span><span class="p">,</span> <span class="n">n_cycles</span><span class="o">=</span><span class="mf">5.0</span><span class="p">)</span>
 
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;TFR shape (channels, freqs, time): </span><span class="si">{</span><span class="n">tfr</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Mean raw power: </span><span class="si">{</span><span class="n">tfr</span><span class="o">.</span><span class="n">power</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"TFR shape (channels, freqs, time): </span><span class="si">{</span><span class="n">tfr</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Mean raw power: </span><span class="si">{</span><span class="n">tfr</span><span class="o">.</span><span class="n">power</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </code></pre></div>
 <h3 id="3-directed-information-flow-phase-slope-index">3. Directed Information Flow (Phase Slope Index)<a class="headerlink" href="#3-directed-information-flow-phase-slope-index" title="Permanent link">&para;</a></h3>
 <p>Compute robust, phase-slope directionality between two time series with phase-randomized surrogate significance testing:</p>
@@ -1495,7 +1525,7 @@
 <span class="n">sig_b</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">roll</span><span class="p">(</span><span class="n">sig_a</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">rng</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
 
 <span class="n">psi</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">phase_slope_index</span><span class="p">(</span><span class="n">sig_a</span><span class="p">,</span> <span class="n">sig_b</span><span class="p">,</span> <span class="n">fs</span><span class="o">=</span><span class="mf">1000.0</span><span class="p">,</span> <span class="n">freq_range</span><span class="o">=</span><span class="p">(</span><span class="mf">8.0</span><span class="p">,</span> <span class="mf">30.0</span><span class="p">),</span> <span class="n">n_surrogates</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;PSI Score: </span><span class="si">{</span><span class="n">psi</span><span class="o">.</span><span class="n">score</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">, p-value: </span><span class="si">{</span><span class="n">psi</span><span class="o">.</span><span class="n">p_value</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"PSI Score: </span><span class="si">{</span><span class="n">psi</span><span class="o">.</span><span class="n">score</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">, p-value: </span><span class="si">{</span><span class="n">psi</span><span class="o">.</span><span class="n">p_value</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </code></pre></div>
 <h3 id="4-spiking-psth-onset-dynamics">4. Spiking PSTH &amp; Onset Dynamics<a class="headerlink" href="#4-spiking-psth-onset-dynamics" title="Permanent link">&para;</a></h3>
 <p>Calculate peristimulus time histograms with bootstrap confidence intervals and fit parametric latency models:</p>
@@ -1504,15 +1534,20 @@
 
 <span class="n">time_bins</span><span class="p">,</span> <span class="n">rate</span><span class="p">,</span> <span class="n">sem</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">raster_psth</span><span class="p">(</span><span class="n">spk_times</span><span class="p">,</span> <span class="n">event_onsets</span><span class="p">,</span> <span class="n">win_ms</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mf">100.0</span><span class="p">,</span> <span class="mf">400.0</span><span class="p">),</span> <span class="n">bin_ms</span><span class="o">=</span><span class="mf">10.0</span><span class="p">)</span>
 <span class="n">onset_fit</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">fit_exponential_onset</span><span class="p">(</span><span class="n">time_bins</span><span class="p">,</span> <span class="n">rate</span><span class="p">,</span> <span class="n">t0_bounds</span><span class="o">=</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">250.0</span><span class="p">))</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Estimated latency t0: </span><span class="si">{</span><span class="n">onset_fit</span><span class="p">[</span><span class="s1">&#39;t0&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> ms (status: </span><span class="si">{</span><span class="n">onset_fit</span><span class="p">[</span><span class="s1">&#39;bound_status&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Estimated latency t0: </span><span class="si">{</span><span class="n">onset_fit</span><span class="p">[</span><span class="s1">'t0'</span><span class="p">]</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> ms (status: </span><span class="si">{</span><span class="n">onset_fit</span><span class="p">[</span><span class="s1">'bound_status'</span><span class="p">]</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
 </code></pre></div>
 <h3 id="5-non-parametric-statistical-testing">5. Non-Parametric Statistical Testing<a class="headerlink" href="#5-non-parametric-statistical-testing" title="Permanent link">&para;</a></h3>
 <p>Evaluate trial-level event comparisons using stratified shuffle permutations:</p>
 <div class="highlight"><pre><span></span><code><span class="n">fires_cond_a</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">])</span>
 <span class="n">fires_cond_b</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">])</span>
 
-<span class="n">stat_res</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">paired_fire_prob_test</span><span class="p">(</span><span class="n">fires_cond_a</span><span class="p">,</span> <span class="n">fires_cond_b</span><span class="p">,</span> <span class="n">n_shuffles</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">rng</span><span class="o">=</span><span class="n">rng</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Empirical delta: </span><span class="si">{</span><span class="n">stat_res</span><span class="p">[</span><span class="s1">&#39;delta_fire_prob&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">, p-value: </span><span class="si">{</span><span class="n">stat_res</span><span class="p">[</span><span class="s1">&#39;p_value_fire_shuffle&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="n">stat_res</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">paired_fire_prob_test</span><span class="p">(</span>
+    <span class="n">fires_cond_a</span><span class="p">,</span> <span class="n">fires_cond_b</span><span class="p">,</span> <span class="n">n_shuffles</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">n_bootstrap</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">rng</span><span class="o">=</span><span class="n">rng</span>
+<span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span>
+    <span class="sa">f</span><span class="s2">"Risk difference: </span><span class="si">{</span><span class="n">stat_res</span><span class="p">[</span><span class="s1">'risk_difference'</span><span class="p">]</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">, "</span>
+    <span class="sa">f</span><span class="s2">"p-value: </span><span class="si">{</span><span class="n">stat_res</span><span class="p">[</span><span class="s1">'p_value_fire_shuffle'</span><span class="p">]</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">"</span>
+<span class="p">)</span>
 </code></pre></div>
 <h3 id="6-joint-representational-similarity-jrsa">6. Joint Representational Similarity (jRSA)<a class="headerlink" href="#6-joint-representational-similarity-jrsa" title="Permanent link">&para;</a></h3>
 <p>Compare multi-condition activity patterns across modalities, areas, or models:</p>
@@ -1520,8 +1555,8 @@
 <span class="n">X</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mi">50</span><span class="p">))</span>
 <span class="n">Y</span> <span class="o">=</span> <span class="n">X</span> <span class="o">+</span> <span class="mf">0.3</span> <span class="o">*</span> <span class="n">rng</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mi">50</span><span class="p">))</span>
 
-<span class="n">jrsa_res</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">jrsa</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">,</span> <span class="n">metric</span><span class="o">=</span><span class="s2">&quot;rsa&quot;</span><span class="p">,</span> <span class="n">stats</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">n_permutations</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;jRSA alignment: </span><span class="si">{</span><span class="n">jrsa_res</span><span class="o">.</span><span class="n">value</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">, p-value: </span><span class="si">{</span><span class="n">jrsa_res</span><span class="o">.</span><span class="n">p_value</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="n">jrsa_res</span> <span class="o">=</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">jrsa</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">,</span> <span class="n">metric</span><span class="o">=</span><span class="s2">"rsa"</span><span class="p">,</span> <span class="n">stats</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">n_permutations</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"jRSA alignment: </span><span class="si">{</span><span class="n">jrsa_res</span><span class="o">.</span><span class="n">value</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">, p-value: </span><span class="si">{</span><span class="n">jrsa_res</span><span class="o">.</span><span class="n">p_value</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </code></pre></div>
 
 

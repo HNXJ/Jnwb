@@ -264,6 +264,8 @@
       
         
       
+        
+      
     
     
     
@@ -478,6 +480,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../common_mistakes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Common Mistakes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../api/" class="md-nav__link">
         
   
@@ -513,7 +543,7 @@
   <span class="md-ellipsis">
     
   
-    AI Agent Memory
+    Recipes
   
 
     
@@ -1268,29 +1298,30 @@
 <h2 id="pypi">PyPI<a class="headerlink" href="#pypi" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>-U<span class="w"> </span>jnwb
 </code></pre></div>
-<p>The current library release adheres to a strictly defined, dataset-agnostic contract documented in <a href="../api/">Public API</a> (101-symbol surface).</p>
+<p>The current library release is dataset-agnostic. The public surface is documented in <a href="../api/">Public API</a> and is the contents of <code>jnwb.__all__</code>.</p>
 <h3 id="optional-acceleration-backends-extras">Optional Acceleration Backends &amp; Extras<a class="headerlink" href="#optional-acceleration-backends-extras" title="Permanent link">&para;</a></h3>
 <p><code>jnwb</code> is structured with modular extras so production workflows install only what they need:</p>
-<div class="highlight"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;jnwb[torch,gpu]&quot;</span><span class="w">   </span><span class="c1"># PyTorch, CuPy, and CUDA 12.x acceleration</span>
-pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;jnwb[mcp]&quot;</span><span class="w">         </span><span class="c1"># Model Context Protocol server tooling</span>
-pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;jnwb[docs]&quot;</span><span class="w">        </span><span class="c1"># MkDocs documentation builder</span>
-pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;jnwb[test]&quot;</span><span class="w">        </span><span class="c1"># pytest, pytest-cov, pytest-xdist test suites</span>
-pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;jnwb[all]&quot;</span><span class="w">         </span><span class="c1"># Complete dependency bundle</span>
+<div class="highlight"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"jnwb[torch,gpu]"</span><span class="w">   </span><span class="c1"># PyTorch, CuPy, and CUDA 12.x acceleration</span>
+pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"jnwb[mcp]"</span><span class="w">         </span><span class="c1"># Model Context Protocol server tooling</span>
+pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"jnwb[docs]"</span><span class="w">        </span><span class="c1"># MkDocs documentation builder</span>
+pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"jnwb[test]"</span><span class="w">        </span><span class="c1"># pytest, pytest-cov, pytest-xdist test suites</span>
+pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"jnwb[all]"</span><span class="w">         </span><span class="c1"># Complete dependency bundle</span>
 </code></pre></div>
 <h2 id="source-checkout">Source Checkout<a class="headerlink" href="#source-checkout" title="Permanent link">&para;</a></h2>
 <p>Clone and install an editable development environment:</p>
 <div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/HNXJ/jnwb.git
 <span class="nb">cd</span><span class="w"> </span>jnwb
-pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;.[all]&quot;</span>
+pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span><span class="s2">".[all]"</span>
 </code></pre></div>
 <h2 id="verify">Verify<a class="headerlink" href="#verify" title="Permanent link">&para;</a></h2>
 <p>Run the verification snippet in your Python environment:</p>
 <div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">jnwb</span>
 
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;jnwb version: </span><span class="si">{</span><span class="n">jnwb</span><span class="o">.</span><span class="n">__version__</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Public surface: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">jnwb</span><span class="o">.</span><span class="n">__all__</span><span class="p">)</span><span class="si">}</span><span class="s2"> symbols&quot;</span><span class="p">)</span>
-<span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">jnwb</span><span class="o">.</span><span class="n">__all__</span><span class="p">)</span> <span class="o">==</span> <span class="mi">101</span><span class="p">,</span> <span class="s2">&quot;Public surface mismatch!&quot;</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Verification passed successfully.&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"jnwb version: </span><span class="si">{</span><span class="n">jnwb</span><span class="o">.</span><span class="n">__version__</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Public surface: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">jnwb</span><span class="o">.</span><span class="n">__all__</span><span class="p">)</span><span class="si">}</span><span class="s2"> symbols"</span><span class="p">)</span>
+<span class="n">missing</span> <span class="o">=</span> <span class="p">[</span><span class="n">name</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">jnwb</span><span class="o">.</span><span class="n">__all__</span> <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">jnwb</span><span class="p">,</span> <span class="n">name</span><span class="p">)]</span>
+<span class="k">assert</span> <span class="ow">not</span> <span class="n">missing</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"Unresolved public exports: </span><span class="si">{</span><span class="n">missing</span><span class="si">}</span><span class="s2">"</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"Verification passed successfully."</span><span class="p">)</span>
 </code></pre></div>
 
 

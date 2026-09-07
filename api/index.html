@@ -260,6 +260,8 @@
       
         
       
+        
+      
     
     
     
@@ -357,6 +359,34 @@
     
   
     Quickstart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../common_mistakes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Common Mistakes
   
 
     
@@ -507,6 +537,17 @@
     <span class="md-ellipsis">
       
         Package-level re-exports
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#module-jnwbfiltering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Module: jnwb.filtering
       
     </span>
   </a>
@@ -679,7 +720,7 @@
   <span class="md-ellipsis">
     
   
-    AI Agent Memory
+    Recipes
   
 
     
@@ -1445,6 +1486,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#module-jnwbfiltering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Module: jnwb.filtering
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#module-jnwbdecoding" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1707,6 +1759,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#module-jnwbfiltering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Module: jnwb.filtering
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#module-jnwbdecoding" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1870,7 +1933,7 @@
 
 
 <h1 id="complete-api-reference">Complete API Reference<a class="headerlink" href="#complete-api-reference" title="Permanent link">&para;</a></h1>
-<p>All 101 core functions, classes, and constants exported in the top-level jnwb namespace.</p>
+<p>All 111 core functions, classes, and constants exported in the top-level jnwb namespace.</p>
 <h2 id="module-jnwbaddressing">Module: jnwb.addressing<a class="headerlink" href="#module-jnwbaddressing" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -1972,6 +2035,16 @@
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>jnwb.DETECTION_TAILS</td>
+<td>constant</td>
+<td>('upper', 'both')<br><em>Accepted tails for <code>detect_band_outliers</code>; <code>'both'</code> is not the conservative choice.</em></td>
+</tr>
+<tr>
+<td>jnwb.detect_band_outliers</td>
+<td>function</td>
+<td>detect_band_outliers(band_trace, z_thresh=6.0, sided='upper')<br><em>Flag (trial, time) cells departing from the cross-trial trend; returns (mask, scale).</em></td>
+</tr>
 <tr>
 <td>jnwb.repair_band_artifacts</td>
 <td>function</td>
@@ -2110,6 +2183,28 @@
 </tr>
 </tbody>
 </table>
+<h2 id="module-jnwbfiltering">Module: jnwb.filtering<a class="headerlink" href="#module-jnwbfiltering" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Symbol</th>
+<th>Type</th>
+<th>Signature / Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>jnwb.bandpass_filter</td>
+<td>function</td>
+<td>bandpass_filter(data: numpy.ndarray, fs: float, low_cut: float, high_cut: float, order: int = 4, zero_phase: bool = True, axis: int = -1) -&gt; numpy.ndarray<br><em>Apply a Butterworth bandpass filter using Second-Order Sections (SOS).</em></td>
+</tr>
+<tr>
+<td>jnwb.notch_filter</td>
+<td>function</td>
+<td>notch_filter(data: numpy.ndarray, fs: float, freq: float = 60.0, q: float = 30.0, zero_phase: bool = True, axis: int = -1) -&gt; numpy.ndarray<br><em>Apply an IIR notch filter using Second-Order Sections (SOS) conversion.</em></td>
+</tr>
+</tbody>
+</table>
 <h2 id="module-jnwbdecoding">Module: jnwb.decoding<a class="headerlink" href="#module-jnwbdecoding" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -2205,11 +2300,6 @@
 <td>classify_unit_quality(units_df: pandas.core.frame.DataFrame, thresholds: Dict[str, float]</td>
 </tr>
 <tr>
-<td>jnwb.compare_old_new_criteria</td>
-<td>function</td>
-<td>compare_old_new_criteria(new_df: pandas.core.frame.DataFrame, old_df: pandas.core.frame.DataFrame, new_key: Tuple[str, str] = ('session', 'unit_row'), old_key: Tuple[str, str] = ('session_prefix', 'unit_row_idx'), class_col_new: str = 'is_omission_inclusion_new', class_col_old: str = 'is_Oplus') -&gt; pandas.core.frame.DataFrame<br><em>Diff two boolean unit-classification columns across two DataFrames on a join key.</em></td>
-</tr>
-<tr>
 <td>jnwb.electrode_inventory</td>
 <td>function</td>
 <td>electrode_inventory(nwb_paths: str</td>
@@ -2228,11 +2318,6 @@
 <td>jnwb.get_snr_analysis</td>
 <td>function</td>
 <td>get_snr_analysis(units_df: pandas.core.frame.DataFrame, snr_threshold: float = 1.0, detail: bool = False) -&gt; Dict<br><em>Analyze SNR distribution and quality.</em></td>
-</tr>
-<tr>
-<td>jnwb.old_new_summary_table</td>
-<td>function</td>
-<td>old_new_summary_table(compared: pandas.core.frame.DataFrame, group_cols: Tuple[str, ...] = ('area', 'quality_tier')) -&gt; pandas.core.frame.DataFrame<br><em>Explicit gained/lost/unchanged counts per class per grouping column.</em></td>
 </tr>
 <tr>
 <td>jnwb.unit_census_report</td>
@@ -2368,14 +2453,29 @@
 </thead>
 <tbody>
 <tr>
+<td>jnwb.DB_AGGREGATIONS</td>
+<td>constant</td>
+<td>('mean_of_ratios', 'ratio_of_means')<br><em>The two accepted estimands for <code>aggregate_to_db</code>; they differ, so the caller names one.</em></td>
+</tr>
+<tr>
+<td>jnwb.aggregate_to_db</td>
+<td>function</td>
+<td>aggregate_to_db(power, baseline, <em>, how: str, aggregate_over=None, nan_policy: str = 'propagate')<br></em>Form the ratio, aggregate on the ratio scale, then <code>10*log10</code> exactly once.*</td>
+</tr>
+<tr>
 <td>jnwb.band_power</td>
 <td>function</td>
-<td>band_power(lfp_trace: numpy.ndarray, sampling_rate: float, freq_range: Tuple[float, float], normalize: bool = True, baseline: numpy.ndarray</td>
+<td>band_power(lfp_trace: numpy.ndarray, fs: float</td>
 </tr>
 <tr>
 <td>jnwb.bipolar_reference</td>
 <td>function</td>
 <td>bipolar_reference(channel_data: numpy.ndarray, channel_order: numpy.ndarray</td>
+</tr>
+<tr>
+<td>jnwb.compute_multitaper_psd</td>
+<td>function</td>
+<td>compute_multitaper_psd(data: numpy.ndarray, fs: float, nw: float = 3.0, k_tapers: Optional[int] = None, axis: int = -1) -&gt; Tuple[numpy.ndarray, numpy.ndarray]<br><em>Compute power spectral density via the Discrete Prolate Spheroidal Sequences (DPSS) multitaper method.</em></td>
 </tr>
 <tr>
 <td>jnwb.compute_psd</td>
@@ -2385,17 +2485,22 @@
 <tr>
 <td>jnwb.cross_area_coherence</td>
 <td>function</td>
-<td>cross_area_coherence(lfp_area1: numpy.ndarray, lfp_area2: numpy.ndarray, sampling_rate: float, freq_bands: Dict[str, Tuple[float, float]]</td>
+<td>cross_area_coherence(lfp_area1: numpy.ndarray, lfp_area2: numpy.ndarray, fs: float</td>
+</tr>
+<tr>
+<td>jnwb.current_source_density_1d</td>
+<td>function</td>
+<td>current_source_density_1d(lfp_matrix: numpy.ndarray, pitch_um: float, conductivity_s_per_m: float, axis: int = 0) -&gt; numpy.ndarray<br><em>Compute physical 1D Current Source Density (CSD) along a laminar electrode array.</em></td>
 </tr>
 <tr>
 <td>jnwb.harmonic_analysis</td>
 <td>function</td>
-<td>harmonic_analysis(lfp_trace: numpy.ndarray, sampling_rate: float, freq_range: Tuple[float, float] = (1.0, 90.0), harmonic_orders: int = 3, device: str = 'cpu') -&gt; Dict<br><em>Decompose LFP trace into fundamental and harmonic components.</em></td>
+<td>harmonic_analysis(lfp_trace: numpy.ndarray, fs: float</td>
 </tr>
 <tr>
 <td>jnwb.imaginary_coherency</td>
 <td>function</td>
-<td>imaginary_coherency(x: numpy.ndarray, y: numpy.ndarray, sampling_rate: float, freq_range: Tuple[float, float], nperseg: int</td>
+<td>imaginary_coherency(x: numpy.ndarray, y: numpy.ndarray, fs: float</td>
 </tr>
 <tr>
 <td>jnwb.laplacian_reference</td>
@@ -2405,12 +2510,17 @@
 <tr>
 <td>jnwb.spectral_tilt</td>
 <td>function</td>
-<td>spectral_tilt(lfp_trace: numpy.ndarray, sampling_rate: float, freq_range: Tuple[float, float] = (1.0, 100.0), device: str = 'cpu') -&gt; Dict<br><em>Analyze 1/f spectral tilt (aperiodic component).</em></td>
+<td>spectral_tilt(lfp_trace: numpy.ndarray, fs: float</td>
 </tr>
 <tr>
 <td>jnwb.to_db</td>
 <td>function</td>
 <td>to_db(ratio)<br><em><code>10*log10(ratio)</code>, the single point every power-ratio-to-dB conversion should pass</em></td>
+</tr>
+<tr>
+<td>jnwb.voltage_curvature_1d</td>
+<td>function</td>
+<td>voltage_curvature_1d(lfp_matrix: numpy.ndarray, pitch_um: float, axis: int = 0) -&gt; numpy.ndarray<br><em>Compute the discrete second spatial derivative of extracellular potential along a laminar probe.</em></td>
 </tr>
 </tbody>
 </table>
@@ -2433,6 +2543,16 @@
 <td>jnwb.compute_response_metrics</td>
 <td>function</td>
 <td>compute_response_metrics(spike_times: numpy.ndarray, epoch_onsets: numpy.ndarray, baseline_window: Tuple[float, float] = (-0.25, -0.05), response_window: Tuple[float, float] = (0.0, 0.15), z_score: bool = True) -&gt; Dict[str, float]<br><em>Compute firing rate and spike count metrics for stimulus responses.</em></td>
+</tr>
+<tr>
+<td>jnwb.gaussian_smooth_rate</td>
+<td>function</td>
+<td>gaussian_smooth_rate(rate: numpy.ndarray, bin_ms: float, sigma_ms: float = 20.0, axis: int = -1) -&gt; numpy.ndarray<br><em>Apply symmetrical, acausal Gaussian smoothing to a binned firing rate trace.</em></td>
+</tr>
+<tr>
+<td>jnwb.pairwise_phase_consistency</td>
+<td>function</td>
+<td>pairwise_phase_consistency(phases: numpy.ndarray, axis: int = -1) -&gt; Union[float, numpy.ndarray]<br><em>Compute the Pairwise Phase Consistency (PPC) across angular samples (Vinck et al., 2010).</em></td>
 </tr>
 <tr>
 <td>jnwb.phase_locking_index</td>
@@ -2460,6 +2580,11 @@
 <td>jnwb.assign_subblock_quartiles</td>
 <td>function</td>
 <td>assign_subblock_quartiles(epochs_df: 'pd.DataFrame', n_quantiles: 'int' = 4) -&gt; 'np.ndarray'<br><em>Assign each row a temporal quantile bucket 0..n_quantiles-1 by its own start_time order.</em></td>
+</tr>
+<tr>
+<td>jnwb.cluster_permutation_test</td>
+<td>function</td>
+<td>cluster_permutation_test(X: numpy.ndarray, Y: numpy.ndarray, <em>, paired: bool = False, groups: Optional[Union[numpy.ndarray, Tuple[numpy.ndarray, numpy.ndarray]]] = None, scheme: Optional[str] = None, threshold: float = 2.0, n_permutations: int = 1000, tail: str = 'both', rng: Optional[numpy.random.Generator] = None) -&gt; Dict<br></em>Non-parametric cluster-based permutation test for multidimensional signals (Maris &amp; Oostenveld, 2007).*</td>
 </tr>
 <tr>
 <td>jnwb.cross_modal_comparison</td>
