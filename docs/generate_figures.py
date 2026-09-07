@@ -420,7 +420,8 @@ def fig09_directed_connectivity():
     gc = jnwb.granger(x_filt, y_trials, order=15)
     bars = ax1.bar(["X → Y\n(True Feedforward)", "Y → X\n(Feedback)"], [gc.x_to_y, gc.y_to_x], color=[C_VIOLET, C_GRAY], width=0.5, edgecolor=C_DARK, lw=0.6)
     for b_item, val, p_val in zip(bars, [gc.x_to_y, gc.y_to_x], [gc.p_x_to_y, gc.p_y_to_x]):
-        ax1.text(b_item.get_x() + b_item.get_width() / 2, val + 0.01, f"{val:.3f}\n(p={p_val:.3f})", ha="center", fontsize=7.2)
+        p_str = "p < 0.001" if p_val < 0.001 else f"p = {p_val:.3f}"
+        ax1.text(b_item.get_x() + b_item.get_width() / 2, val + 0.01, f"{val:.3f}\n({p_str})", ha="center", fontsize=7.2)
     ax1.set_ylabel("Log Variance Ratio")
     ax1.set_ylim(0, max(gc.x_to_y, gc.y_to_x) * 1.35)
     ax1.set_title("A. Bivariate Granger Causality\n(jnwb.granger, order=15)", pad=8)
