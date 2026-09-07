@@ -30,7 +30,7 @@ graph TD
 2. [**02. Paths, Addressing, Metadata & Ontology**](02_paths_addressing_metadata.md)
    - Dynamic path management and volume remap isolation (`paths`).
    - Spatial peak-channel-to-area and depth-to-layer addressing (`map_peak_channel_to_area`, `classify_layer_from_depth`, `enrich_units_dataframe`).
-   - Unit quality classification, census reporting, and SNR auditing (`get_all_units_metadata`, `classify_unit_quality`, `unit_census_report`, `get_snr_analysis`, `filter_by_criteria`, `audit_units`, `audit_electrodes`, `assign_quality_tier`, `compare_old_new_criteria`, `old_new_summary_table`, `electrode_inventory`).
+   - Unit quality classification, census reporting, and SNR auditing (`get_all_units_metadata`, `classify_unit_quality`, `unit_census_report`, `get_snr_analysis`, `filter_by_criteria`, `audit_units`, `audit_electrodes`, `assign_quality_tier`, `electrode_inventory`).
    - Query descriptors and ontology metadata (`Query`, `Dataset`, `AlignedDataset`, `Alignment`, `EpochCollection`, `Question`, `Result`, `Interpretation`, `Figure`, `Provenance`, `Lineage`).
 
 3. [**03. Representational Similarity Analysis (JRSA)**](03_representational_similarity_jrsa.md)

@@ -63,8 +63,7 @@ class TestJnwbFrozenBoundary:
                 if (rel, modname) not in AUTHORIZED_EXCEPTIONS:
                     violations.append(f"jnwb/{rel}:{lineno} imports {modname!r}")
         assert not violations, (
-            "jnwb/ imports from omission/ outside the two documented, explicitly authorized "
-            "exceptions (see CLAUDE.md's freeze policy and AUTHORIZED_EXCEPTIONS in this test). "
+            "jnwb/ imports from omission/ (see CLAUDE.md's freeze policy and AUTHORIZED_EXCEPTIONS in this test). "
             "Either this is a new coupling that needs Hamm's explicit authorization before it "
             "can land, or AUTHORIZED_EXCEPTIONS needs updating alongside it:\n"
             + "\n".join(violations)

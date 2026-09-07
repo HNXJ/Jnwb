@@ -108,7 +108,7 @@ def paired_fire_prob_test(
         rng: explicit numpy.random.Generator.
 
     Returns:
-        dict with p_fire_target, p_fire_pre_omission_baseline, risk_difference (+ CI),
+        dict with p_fire_target, p_fire_baseline, risk_difference (+ CI),
         odds_ratio (+ CI), p_value_fire_shuffle, n_trials. All-NaN/p=1.0 when fewer than 2
         paired trials are available.
     """
@@ -118,7 +118,7 @@ def paired_fire_prob_test(
     if n < 2:
         return {
             "p_fire_target": float(np.mean(t)) if len(t) else float("nan"),
-            "p_fire_pre_omission_baseline": float(np.mean(u)) if len(u) else float("nan"),
+            "p_fire_baseline": float(np.mean(u)) if len(u) else float("nan"),
             "risk_difference": float("nan"),
             "risk_difference_ci_lo": float("nan"),
             "risk_difference_ci_hi": float("nan"),
@@ -155,7 +155,7 @@ def paired_fire_prob_test(
 
     return {
         "p_fire_target": p_target,
-        "p_fire_pre_omission_baseline": p_null,
+        "p_fire_baseline": p_null,
         "risk_difference": obs,
         "risk_difference_ci_lo": float(ci_lo),
         "risk_difference_ci_hi": float(ci_hi),
@@ -1063,7 +1063,9 @@ def cluster_permutation_test(
             - When paired=True: Array of shape (n_samples_X,).
             - When paired=False: Either a tuple (groups_X, groups_Y) matching X and Y samples,
               or a single array of shape (n_samples_X + n_samples_Y,).
-            Required when scheme='within_group'.
+            Required when scheme='within_group'. When paired=True, each pair is already
+            the sampling unit; sign-flips are independent across pairs and ``groups`` does
+            not further restrict the null.
         scheme: Explicit exchangeability scheme for independent testing:
             - 'global': Unrestricted condition label shuffle across all samples.
             - 'within_group': Condition labels are shuffled strictly within each group/session,
@@ -1230,12 +1232,6 @@ def cluster_permutation_test(
             k = int(np.sum(max_null_stats <= stat))
         else:  # both
             k = int(np.sum(max_null_stats >= abs(stat)))
-        p_val = (1.0 + k) / (n_permutations + 1.0)
-        cluster_results.append({
-            'statistic': stat,
-            'p_value': float(p_val),
-            'mask': mask,
-        })
         p_val = (1.0 + k) / (n_permutations + 1.0)
         cluster_results.append({
             'statistic': stat,

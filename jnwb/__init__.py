@@ -1,35 +1,20 @@
 """
-jnwb: generic NWB analysis library
+jnwb: dataset-agnostic NWB electrophysiology analysis library.
 
-Dataset-agnostic NWB access, addressing, JRSA, and statistics. Task-specific
-functionality (condition codes, unit classification, decoding, connectivity,
-figure suites, etc.) lives in the ``omission`` project package, which depends
-on this library and re-exports these generic pieces under its own flat
-``import omission as oa`` surface for drop-in compatibility with the
-pre-2026-08-19 ``import jnwb as oa`` API.
+Provides composable operations for NWB addressing, spikes, LFP, spectral
+analysis, statistics, population analysis, decoding, connectivity, laminar
+CSD, filtering, QC/artifact handling, and visualization. Experiment-specific
+condition codes and hypotheses belong in downstream project code, not here.
 
-Quick Start:
     >>> import jnwb
     >>> result = jnwb.jrsa(x1, x2, metric='rsa', stats=True)
-    >>> result.summary()
-    >>> result.plot()
     >>> jnwb.paths.describe()
-
-Author: Claude Code
-Date: 2025-06-24
-Restructured: 2026-08-19 -- split into this generic library + omission/ project package.
-Version: 0.1.1
-
-Versioning note: this package was carved out of a single project repo (previously versioned
-2.0.0 as part of that project's own history) into a standalone generic library on 2026-08-19.
-It restarts at 0.1.0 under standard pre-1.0 semver -- the API surface has not yet been exercised
-by a second consumer, so nothing here should be treated as stable/frozen until 1.0.0.
 """
 
 __version__ = '0.1.1'
-__release_date__ = '2026-09-06'
-__author__ = 'Claude Code'
-__status__ = 'Beta -- pre-1.0, API not yet frozen'
+__release_date__ = '2026-09-07'
+__author__ = 'Hamed Nejat'
+__status__ = 'Beta'
 
 import logging
 from pathlib import Path
@@ -105,11 +90,6 @@ try:
 except Exception as e:
     pass
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
 log = logging.getLogger(__name__)
 
 # ============================================================================

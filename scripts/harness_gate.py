@@ -23,13 +23,12 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 JNWB_DIR = REPO_ROOT / "jnwb"
 OMISSION_DIR = REPO_ROOT / "omission"
 
-AUTHORIZED_JNWB_EXCEPTIONS = {
-    ("addressing.py", "omission.jnwb_ext.sequence_layout"),
-    ("jrsa.py", "omission.jnwb_ext.connectivity"),
-}
+AUTHORIZED_JNWB_EXCEPTIONS: set = set()
 
 PROTECTED_PATHS = [
     "omission/context/figures",

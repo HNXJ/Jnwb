@@ -73,6 +73,10 @@ jobs:
         run: |
           sphinx-build -W -b html docs docs/_build/html
 
+      - name: Build documentation with MkDocs (strict)
+        run: |
+          mkdocs build --strict
+
       - name: Build sdist and wheel
         run: |
           python -m build
@@ -122,13 +126,21 @@ jobs:
           import jnwb
           print('Installed jnwb version:', jnwb.__version__)
           print('Installed location:', jnwb.__file__)
-          assert len(jnwb.__all__) == 101, f'Expected 101 symbols, got {len(jnwb.__all__)}'
+          missing = [s for s in jnwb.__all__ if not hasattr(jnwb, s)]
+          assert not missing, f'Missing exports: {missing}'
+          print(f'PASS: {len(jnwb.__all__)} public exports resolved')
 
-          # Smoke test of core primitives
+          # Representative installed-package workflows across modules
           import numpy as np
           rng = np.random.default_rng(42)
           tfr = jnwb.complex_tfr(rng.normal(size=500), fs=1000.0, freqs=np.linspace(10, 40, 4))
           assert tfr.shape == (4, 500)
+          freqs, psd = jnwb.compute_multitaper_psd(rng.normal(size=512), fs=1000.0)
+          assert len(freqs) == len(psd)
+          filt = jnwb.bandpass_filter(rng.normal(size=500), fs=1000.0, low_cut=8.0, high_cut=40.0)
+          assert filt.shape == (500,)
+          ppc = jnwb.pairwise_phase_consistency(rng.uniform(-np.pi, np.pi, 40))
+          assert np.isfinite(ppc)
           print('PASS: Installed wheel verified in clean virtualenv')
           "
 

@@ -90,7 +90,7 @@ def main() -> None:
 
         log.info("=== STEP 6: Creating isolated venv for wheel installation ===")
         venv_dir = staging_dir / "isolated_venv"
-        subprocess.run([sys.executable, "-m", "venv", "--system-site-packages", str(venv_dir)], check=True)
+        subprocess.run([sys.executable, "-m", "venv", str(venv_dir)], check=True)
 
         if sys.platform == "win32":
             venv_python = str(venv_dir / "Scripts" / "python.exe")
@@ -100,7 +100,8 @@ def main() -> None:
             venv_pip = str(venv_dir / "bin" / "pip")
 
         log.info(f"Installing wheel {whl} into isolated environment...")
-        subprocess.run([venv_pip, "install", "--no-deps", "--force-reinstall", str(whl)], check=True)
+        subprocess.run([venv_pip, "install", "--upgrade", "pip"], check=True)
+        subprocess.run([venv_pip, "install", str(whl)], check=True)
 
         log.info("Checking package dependencies with pip check...")
         check_res = subprocess.run([venv_pip, "check"], capture_output=True, text=True)
@@ -131,6 +132,10 @@ except ModuleNotFoundError:
 import jnwb
 print(f'PASS: import jnwb successful from {jnwb.__file__}')
 print(f'      jnwb.__version__ = {jnwb.__version__}')
+pkg = pathlib.Path(jnwb.__file__).resolve()
+assert 'site-packages' in str(pkg) or 'dist-packages' in str(pkg), f'expected installed location, got {pkg}'
+out_dir = jnwb.paths.outputs_dir()
+assert 'site-packages' not in str(out_dir) and 'dist-packages' not in str(out_dir)
 
 # 3. Test all exported symbols in __all__
 for sym in jnwb.__all__:
@@ -145,14 +150,25 @@ tb, rate, sem = jnwb.raster_psth(st, onsets, win_ms=(-100, 300), bin_ms=10.0)
 smooth = jnwb.causal_exp_smooth(rate, bin_ms=10.0, tau_ms=30.0)
 fit = jnwb.fit_exponential_onset(tb, rate, t0_bounds=(0.0, 200.0))
 assert 't0' in fit and 'bound_status' in fit
+ppc = jnwb.pairwise_phase_consistency(rng.uniform(-np.pi, np.pi, 30))
+assert np.isfinite(ppc)
+gs = jnwb.gaussian_smooth_rate(rate, bin_ms=10.0, sigma_ms=20.0)
+assert gs.shape == rate.shape
 
 # Spectral & TFR
 sig = rng.normal(size=1000)
 freq_grid = np.linspace(10.0, 50.0, 9)
 tfr_res = jnwb.complex_tfr(sig, fs=1000.0, freqs=freq_grid, n_cycles=5.0)
-acc = jnwb.tfr_accumulator.TFRAccumulator((1, len(freq_grid), 1000))
+acc = jnwb.TFRAccumulator((1, len(freq_grid), 1000))
 acc.add_trial(tfr_res.z[None, :, :], valid=tfr_res.coi_mask[None, :, :])
 assert acc.power().shape == (1, 9, 1000)
+mt_f, mt_p = jnwb.compute_multitaper_psd(sig, fs=1000.0)
+assert len(mt_f) == len(mt_p)
+filt = jnwb.bandpass_filter(sig, fs=1000.0, low_cut=8.0, high_cut=40.0)
+assert filt.shape == sig.shape
+lfp = rng.normal(size=(6, 200))
+csd = jnwb.current_source_density_1d(lfp, pitch_um=50.0, conductivity_s_per_m=0.3)
+assert csd.shape == (4, 200)
 
 # Statistics, decoding, connectivity, artifact
 boot = jnwb.StatisticalAnalysis.bootstrap_ci(sig, n_bootstrap=100, rng=rng)
@@ -164,6 +180,11 @@ dec = jnwb.nested_cv_linear_svm(X, y, n_splits=2)
 g_res = jnwb.granger(rng.normal(size=300), rng.normal(size=300), order=2, n_surrogates=5, seed=0)
 corr = jnwb.channel_correlation_matrix(rng.normal(size=(8, 200)))
 rep_lfp, frac, diag = jnwb.repair_lfp_trials(rng.normal(size=(8, 4, 100)))
+clust = jnwb.cluster_permutation_test(
+    rng.normal(size=(8, 20)), rng.normal(size=(8, 20)), n_permutations=20, rng=rng,
+)
+masks = [c['mask'].tobytes() for c in clust['clusters']]
+assert len(masks) == len(set(masks))
 
 # Addressing
 elec = pd.DataFrame({'location': ['V1, V2', 'V1, V2'], 'group_name': ['probeA', 'probeA']}, index=[0, 1])

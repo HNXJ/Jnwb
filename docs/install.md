@@ -6,7 +6,7 @@
 pip install -U jnwb
 ```
 
-The current library release adheres to a strictly defined, dataset-agnostic contract documented in [Public API](api.md) (101-symbol surface).
+The current library release is dataset-agnostic. The public surface is documented in [Public API](api.md) and is the contents of `jnwb.__all__`.
 
 ### Optional Acceleration Backends & Extras
 
@@ -39,6 +39,7 @@ import jnwb
 
 print(f"jnwb version: {jnwb.__version__}")
 print(f"Public surface: {len(jnwb.__all__)} symbols")
-assert len(jnwb.__all__) == 101, "Public surface mismatch!"
+missing = [name for name in jnwb.__all__ if not hasattr(jnwb, name)]
+assert not missing, f"Unresolved public exports: {missing}"
 print("Verification passed successfully.")
 ```

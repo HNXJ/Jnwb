@@ -1,6 +1,6 @@
 '''Digital Filtering primitives for continuous neural and physiological time series.
 
-Provides Second-Order Sections (SOV) bandpass and notch filtering with explicit
+Provides Second-Order Sections (SOS) bandpass and notch filtering with explicit
 distinction between zero-phase forward-backward filtering (acausal, zero phase distortion,
 doubled effective filter order) and causal forward-only filtering (preserves filter delay).
 '''
@@ -57,7 +57,7 @@ def notch_filter(
     zero_phase: bool = True,
     axis: int = -1,
 ) -> np.ndarray:
-    '''Apply an IIR notch filter using Second-Order Sections (SOV) conversion.
+    '''Apply an IIR notch filter using Second-Order Sections (SOS) conversion.
     '''
     if fs <= 0:
         raise ValueError(f"Sampling frequency fs must be strictly positive; got {fs}.")
@@ -67,7 +67,7 @@ def notch_filter(
     if freq >= nyquist:
         raise ValueError(f"Notch frequency ({freq} Hz) must be less than Nyquist frequency ({nyquist} Hz).")
     if q <= 0:
-        raise ValueError(f"Quality factor qmust be strictly positive; got {q}.")
+        raise ValueError(f"Quality factor q must be strictly positive; got {q}.")
 
     arr = np.asarray(data, dtype=float)
     if np.isnan(arr).any():

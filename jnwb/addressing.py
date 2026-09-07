@@ -1,11 +1,10 @@
 """
-Anatomical Addressing and Cortical Layer Mapping for Omission NWB Analysis.
+Anatomical addressing and cortical layer mapping for NWB electrode tables.
 
-Provides unified, canonical functions to map units/channels to areas and layers,
-and standardizes units DataFrame fields (unit_id, area, layer, quality flags).
-
-Author: Claude Code
-Date: 2026-06-28
+Maps units/channels to areas and layers from electrode metadata, and standardizes
+units DataFrame fields (unit_id, area, layer, quality flags). Probe labels are
+split on comma or slash only; this module carries no area vocabulary and does not
+normalize spelling or aliases.
 """
 
 import logging

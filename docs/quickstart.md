@@ -110,8 +110,13 @@ Evaluate trial-level event comparisons using stratified shuffle permutations:
 fires_cond_a = np.array([True, True, False, True, False, True, True, False])
 fires_cond_b = np.array([False, False, False, True, False, False, False, False])
 
-stat_res = jnwb.paired_fire_prob_test(fires_cond_a, fires_cond_b, n_shuffles=500, rng=rng)
-print(f"Empirical delta: {stat_res['delta_fire_prob']:.3f}, p-value: {stat_res['p_value_fire_shuffle']:.4f}")
+stat_res = jnwb.paired_fire_prob_test(
+    fires_cond_a, fires_cond_b, n_shuffles=500, n_bootstrap=500, rng=rng
+)
+print(
+    f"Risk difference: {stat_res['risk_difference']:.3f}, "
+    f"p-value: {stat_res['p_value_fire_shuffle']:.4f}"
+)
 ```
 
 ### 6. Joint Representational Similarity (jRSA)

@@ -149,7 +149,7 @@ class TestPairedFireProbTest:
         result = paired_fire_prob_test(fires_target, fires_null, n_shuffles=200, n_bootstrap=200, rng=rng)
         assert result["risk_difference"] == pytest.approx(1.0)
         assert result["p_fire_target"] == pytest.approx(1.0)
-        assert result["p_fire_pre_omission_baseline"] == pytest.approx(0.0)
+        assert result["p_fire_baseline"] == pytest.approx(0.0)
         assert result["p_value_fire_shuffle"] < 0.05
 
     def test_identical_arrays_give_zero_risk_difference(self):
@@ -164,7 +164,7 @@ class TestPairedFireProbTest:
         fires_target = rng.integers(0, 2, 15).astype(bool)
         fires_null = rng.integers(0, 2, 15).astype(bool)
         result = paired_fire_prob_test(fires_target, fires_null, n_shuffles=50, n_bootstrap=50, rng=rng)
-        for key in ("p_fire_target", "p_fire_pre_omission_baseline", "risk_difference",
+        for key in ("p_fire_target", "p_fire_baseline", "risk_difference",
                     "risk_difference_ci_lo", "risk_difference_ci_hi", "odds_ratio",
                     "odds_ratio_ci_lo", "odds_ratio_ci_hi", "p_value_fire_shuffle", "n_trials"):
             assert key in result

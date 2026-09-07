@@ -213,6 +213,8 @@ class TestClusterPermutation:
         assert np.any(best_cluster["mask"][20:30])
         # Finite Monte Carlo formula: p = (1 + k) / (B + 1)
         assert best_cluster["p_value"] == pytest.approx((1.0 + np.sum(res["max_null_stats"] >= abs(best_cluster["statistic"]))) / 201.0)
+        masks = [c["mask"].tobytes() for c in res["clusters"]]
+        assert len(masks) == len(set(masks)), "each observed cluster must be reported once"
 
     def test_unpaired_cluster_test_recovers_2d_spectrotemporal_cluster(self):
         # Unpaired groups: Condition 1 (15 trials) vs Condition 2 (18 trials) on (8 freqs, 20 times)
@@ -416,4 +418,16 @@ class TestClusterPermutation:
             cluster_permutation_test(X, Y, scheme="within_group", groups=None)
         with pytest.raises(TypeError, match="Generator"):
             cluster_permutation_test(X, Y, rng=42)
+
+    def test_observed_clusters_are_unique(self):
+        rng = np.random.default_rng(123)
+        n_obs, n_times = 20, 50
+        baseline = rng.standard_normal((n_obs, n_times))
+        evoked = baseline.copy()
+        evoked[:, 20:30] += 2.5
+        res = cluster_permutation_test(
+            evoked, baseline, paired=True, threshold=2.0, n_permutations=50, rng=rng,
+        )
+        masks = [c["mask"].tobytes() for c in res["clusters"]]
+        assert len(masks) == len(set(masks))
 
