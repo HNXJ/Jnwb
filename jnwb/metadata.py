@@ -377,15 +377,26 @@ def audit_units(units_df: pd.DataFrame) -> Dict:
 
     # Quality distribution
     if 'quality' in units_df.columns:
-        quality_values = pd.to_numeric(units_df['quality'], errors='coerce')
-        result['quality_distribution'] = {
-            'mean': float(quality_values.mean()),
-            'median': float(quality_values.median()),
-            'std': float(quality_values.std()),
-            'min': float(quality_values.min()),
-            'max': float(quality_values.max()),
-            'good_count': int((quality_values >= 1.0).sum())
-        }
+        quality_values = pd.to_numeric(units_df['quality'], errors='coerce').dropna()
+        if len(quality_values) > 0:
+            result['quality_distribution'] = {
+                'mean': float(quality_values.mean()),
+                'median': float(quality_values.median()),
+                'std': float(quality_values.std()) if len(quality_values) > 1 else 0.0,
+                'min': float(quality_values.min()),
+                'max': float(quality_values.max()),
+                'good_count': int((quality_values >= 1.0).sum()),
+            }
+        else:
+            good_count = int((units_df['quality'].astype(str).str.lower() == 'good').sum())
+            result['quality_distribution'] = {
+                'mean': float('nan'),
+                'median': float('nan'),
+                'std': float('nan'),
+                'min': float('nan'),
+                'max': float('nan'),
+                'good_count': good_count,
+            }
 
     # SNR statistics
     if 'snr' in units_df.columns:
@@ -496,33 +507,15 @@ def assign_quality_tier(
 def compare_old_new_criteria(
     new_df: pd.DataFrame,
     old_df: pd.DataFrame,
+    class_col_new: str,
+    class_col_old: str,
     new_key: Tuple[str, str] = ("session", "unit_row"),
     old_key: Tuple[str, str] = ("session_prefix", "unit_row_idx"),
-    class_col_new: str = "is_omission_inclusion_new",
-    class_col_old: str = "is_Oplus",
 ) -> pd.DataFrame:
     """Diff two boolean unit-classification columns across two DataFrames on a join key.
 
-    PROMOTED 2026-08-23 from omission.jnwb_ext.unit_inclusion (99%-jnwb-sufficiency
-    normalization): a reusable "classifier version diff" utility -- every column name is a
-    parameter (defaults reflect the caller's original convention but nothing is hardcoded into
-    the logic), no session or condition semantics.
-
-    A unit in ``new_df`` absent from ``old_df`` (the old pipeline never screened it, e.g. it
-    failed the old table's own upstream filter) is labeled 'gained' with ``old_screened=False``,
-    kept distinct from a unit the old classifier actually scored and rejected.
-
-    Args:
-        new_df: DataFrame with the new classification column and ``new_key`` columns.
-        old_df: DataFrame with the old classification column and ``old_key`` columns.
-        new_key: (session_col, unit_col) identity-key column names in ``new_df``.
-        old_key: (session_col, unit_col) identity-key column names in ``old_df``.
-        class_col_new: boolean classification column name in ``new_df``.
-        class_col_old: boolean classification column name in ``old_df``.
-
-    Returns:
-        ``new_df`` left-joined with ``old_df``'s classification, plus ``old_screened`` (bool)
-        and ``transition`` (one of "gained", "lost", "unchanged_included", "unchanged_excluded").
+    Retained in metadata.py for module-level compatibility with downstream unit inclusion
+    curation pipelines. Not exported in top-level jnwb namespace.
     """
     new_s, new_u = new_key
     old_s, old_u = old_key
@@ -560,16 +553,11 @@ def old_new_summary_table(
 ) -> pd.DataFrame:
     """Explicit gained/lost/unchanged counts per class per grouping column.
 
-    PROMOTED 2026-08-23 alongside ``compare_old_new_criteria`` (see its docstring); a trivial
-    generic groupby-count over caller-supplied columns.
-
-    Args:
-        compared: output of ``compare_old_new_criteria`` (must have a ``transition`` column).
-        group_cols: columns to group by before counting transitions.
-
-    Returns:
-        DataFrame of counts, one row per (group_cols..., transition).
+    Retained in metadata.py for module-level compatibility with downstream unit inclusion
+    curation pipelines. Not exported in top-level jnwb namespace.
     """
     cols = list(group_cols) + ["transition"]
     summary = compared.groupby(cols).size().reset_index(name="n_units")
     return summary
+
+

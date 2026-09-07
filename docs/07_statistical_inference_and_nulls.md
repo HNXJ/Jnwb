@@ -110,6 +110,41 @@ diff, p_val = jnwb.shuffle_pvalue_paired(a, b, n_shuffles=5000, rng=custom_rng)
 diff, p_val_unpaired = jnwb.shuffle_pvalue_unpaired(a, b, n_shuffles=5000, rng=custom_rng)
 ```
 
+### Cluster-Based Permutation Testing (`cluster_permutation_test`)
+
+For continuous time series, spectra, and time-frequency representations (TFRs), mass-univariate testing creates severe multiple testing problems. `jnwb.cluster_permutation_test` implements Maris & Oostenveld (2007) non-parametric cluster-based permutation testing with maximum-cluster FWER control and exact finite Monte Carlo p-values:
+
+$$p = \frac{1 + k}{B + 1}$$
+
+```python
+# X, Y: (n_trials, n_freqs, n_times) or (n_trials, n_times)
+# 1. Paired differences (sign-flip exchangeability)
+res_paired = jnwb.cluster_permutation_test(
+    X, Y,
+    paired=True,
+    threshold=2.5,        # Point-wise t-statistic threshold for cluster formation
+    n_permutations=1000,  # Monte Carlo permutations
+    tail="both",          # "both", "greater", or "less"
+    rng=custom_rng
+)
+
+# 2. Independent groups with within-session exchangeability restriction
+# (prevents false discoveries caused by session baseline differences)
+res_grouped = jnwb.cluster_permutation_test(
+    X, Y,
+    paired=False,
+    groups=(session_X, session_Y),
+    scheme="within_group",
+    threshold=2.5,
+    n_permutations=1000,
+    rng=custom_rng
+)
+
+print(f"Identified {len(res_grouped['clusters'])} clusters.")
+for c in res_grouped["clusters"]:
+    print(f"Cluster mass: {c['statistic']:.2f}, p-value: {c['p_value']:.4f}")
+```
+
 ---
 
 ## 4. Exchangeable Label Permutation Schemes (`jnwb.permutation`)

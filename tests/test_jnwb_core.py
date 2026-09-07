@@ -22,9 +22,8 @@ from jnwb.analyzers import TFRAnalyzer, UnitAnalyzer
 class TestStatisticalAnalysis(unittest.TestCase):
     """Test statistical analysis core functions."""
 
-    @pytest.mark.filterwarnings("ignore::DeprecationWarning")
     def test_compare_groups_valid_data(self):
-        """Test compare_groups legacy interface: checks fdr_pval_* keys are still present."""
+        """Test compare_groups interface: checks clean return keys and no false fdr_pval_* keys."""
         g1 = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
         g2 = np.array([2.0, 3.0, 4.0, 5.0, 6.0])
         result = StatisticalAnalysis.compare_groups(g1, g2, n_bootstrap=200)
@@ -32,7 +31,8 @@ class TestStatisticalAnalysis(unittest.TestCase):
         # Should have both parametric and non-parametric tests
         self.assertIn('parametric', result)
         self.assertIn('non_parametric', result)
-        self.assertIn('fdr_pval_parametric', result)  # deprecated but still present
+        self.assertNotIn('fdr_pval_parametric', result)
+        self.assertNotIn('fdr_pval_nonparametric', result)
         self.assertEqual(result['parametric']['effect_size_name'], 'cohens_d_pooled')
         self.assertFalse(result['multiple_comparison']['applied'])
         self.assertIn('mean_diff_ci', result)

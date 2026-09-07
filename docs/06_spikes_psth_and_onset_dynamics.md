@@ -51,9 +51,9 @@ print("Is responsive:", sig_result["is_responsive"])
 print("Modulation direction:", sig_result["direction"])
 ```
 
-### Spike-LFP Phase Locking (`phase_locking_index`)
+### Spike-LFP Phase Locking (`phase_locking_index`, `pairwise_phase_consistency`)
 
-Computes the Phase-Locking Value (PLV) and circular phase distribution of spike occurrences relative to an LFP phase time series:
+Computes circular phase distribution, Rayleigh circular non-uniformity test, and descriptive peak-to-mean histogram contrast of spike occurrences relative to an LFP phase time series. Key `'pli'` is maintained strictly as a backwards-compatibility alias for `'peak_to_mean_contrast'`:
 
 ```python
 pli_result = jnwb.phase_locking_index(
@@ -62,15 +62,34 @@ pli_result = jnwb.phase_locking_index(
     lfp_timestamps=lfp_times_s,
     n_bins=18
 )
-print("Phase Locking Value (PLV):", pli_result["plv"])
+print("Peak-to-mean contrast:", pli_result["peak_to_mean_contrast"])
 print("Preferred Phase (rad):", pli_result["preferred_phase"])
+print("Rayleigh z:", pli_result["rayleigh_z"], "p-value:", pli_result["rayleigh_pvalue"])
+```
+
+#### Pairwise Phase Consistency (`pairwise_phase_consistency`)
+Unlike heuristic histogram contrast or PLV/PLI, which has substantial positive sample-size bias ($\mathbb{E}[\text{PLV}] \sim 1/\sqrt{N}$ under noise), Vinck et al. (2010)'s Pairwise Phase Consistency (PPC) is an asymptotically unbiased estimator of squared phase synchronization and is the **recommended estimator** for population and across-unit comparisons:
+
+$$\text{PPC} = \frac{2}{N(N-1)} \sum_{j=1}^{N-1} \sum_{k=j+1}^N \cos(\theta_j - \theta_k)$$
+
+```python
+# phases: 1D array of spike phase angles in radians
+ppc_val = jnwb.pairwise_phase_consistency(spike_phases_rad)
 ```
 
 ---
 
-## 2. Causal Exponential Smoothing & Estimator Latency (`jnwb.onset_fitting`)
+## 2. Smoothing: Causal vs. Acausal Profiles (`jnwb.onset_fitting`, `jnwb.spiking`)
 
-### The Causal Smoothing Invariant
+### Symmetrical Acausal Smoothing (`gaussian_smooth_rate`)
+For display PSTHs, firing rate profiles, and latent trajectories where temporal centering without phase delay is desired:
+
+```python
+# Symmetrical Gaussian smoothing (sigma_ms kernel standard deviation)
+smooth_psth = jnwb.gaussian_smooth_rate(rate_hz, bin_ms=10.0, sigma_ms=20.0)
+```
+
+### The Causal Smoothing Invariant (`causal_exp_smooth`)
 To determine response onset latency accurately, smoothing must be strictly **causal (forward-only)**. Centered (Gaussian or acausal boxcar) filters propagate future post-stimulus spikes backward in time, artificially shifting the apparent onset earlier than physical reality.
 
 ```python

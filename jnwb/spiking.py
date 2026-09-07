@@ -188,31 +188,41 @@ def phase_locking_index(
     n_bins: int = 18
 ) -> Dict[str, Union[float, np.ndarray]]:
     """
-    Compute phase-locking index (PLI) between spikes and LFP phase.
+    Compute circular phase distribution and Rayleigh non-uniformity test of spikes relative to LFP phase.
 
-    Measures whether spikes cluster in specific phases of an oscillation
-    (e.g., prefer certain phases of theta, alpha, beta).
+    Measures whether spikes cluster in specific phases of an oscillation (e.g. theta, alpha, beta).
+
+    Warning:
+        The heuristic histogram contrast returned in `peak_to_mean_contrast` (and its compatibility
+        alias `pli`) exhibits severe sample-count bias (~1/sqrt(N) under noise). For inferential
+        comparisons across units or conditions with differing spike counts, use
+        `pairwise_phase_consistency` (PPC), which is an asymptotically unbiased estimator.
 
     Args:
-        unit_spike_times: Spike times (seconds)
-        lfp_phase: Phase values at each LFP timestamp (radians, -π to π)
-        lfp_timestamps: Timestamps for LFP phase samples (seconds)
-        n_bins: Number of phase bins for histogram (default: 18 = 20° bins)
+        unit_spike_times: Spike times (seconds).
+        lfp_phase: Phase values at each LFP timestamp (radians, -π to π).
+        lfp_timestamps: Timestamps for LFP phase samples (seconds).
+        n_bins: Number of phase bins for histogram (default: 18 = 20° bins).
 
     Returns:
         Dict with:
-        - pli: Phase-locking index (0-1, higher = more locked)
-        - phase_hist: Spike counts per phase bin
-        - preferred_phase: Phase with most spikes (radians)
-        - rayleigh_z: Rayleigh z-statistic for non-uniformity
-        - rayleigh_pvalue: P-value for non-uniform distribution
+        - peak_to_mean_contrast: Heuristic histogram contrast (max - mean) / (max + mean) in [0, 1].
+        - pli: Backwards-compatibility alias for `peak_to_mean_contrast` (subject to sample-count bias).
+        - phase_hist: Spike counts per phase bin.
+        - preferred_phase: Phase bin center with most spikes (radians).
+        - rayleigh_z: Rayleigh z-statistic for circular non-uniformity.
+        - rayleigh_pvalue: P-value for Rayleigh non-uniformity test.
+        - n_spikes: Total number of spike times evaluated.
 
     Example:
-        >>> pli = phase_locking_index(spikes, lfp_phase, lfp_times)
-        >>> print(f"Phase locking: {pli['pli']:.3f} (p={pli['rayleigh_pvalue']:.4f})")
+        >>> res = phase_locking_index(spikes, lfp_phase, lfp_times)
+        >>> print(f"Preferred phase: {res['preferred_phase']:.3f} (Rayleigh p={res['rayleigh_pvalue']:.4f})")
+        >>> # For unbiased across-unit comparison, use PPC:
+        >>> ppc = pairwise_phase_consistency(spike_phases)
     """
     result = {
-        'pli': 0.0,
+        'peak_to_mean_contrast': 0.0,
+        'pli': 0.0,  # Legacy alias for peak_to_mean_contrast
         'phase_hist': np.zeros(n_bins),
         'preferred_phase': 0.0,
         'rayleigh_z': 0.0,
@@ -235,11 +245,14 @@ def phase_locking_index(
     preferred_phase = bin_edges[preferred_bin] + (bin_edges[1] - bin_edges[0]) / 2
     result['preferred_phase'] = float(preferred_phase)
 
-    # Phase-locking index (PLI) - deviation from uniform distribution
+    # Heuristic peak-to-mean histogram contrast: (max - mean) / (max + mean)
+    # WARNING: This quantity exhibits severe positive sample-size bias (~1/sqrt(N) under noise).
+    # For population comparisons across units with differing spike counts, use pairwise_phase_consistency.
     uniform_expectation = np.mean(phase_hist)
     max_count = np.max(phase_hist)
-    pli = (max_count - uniform_expectation) / (max_count + uniform_expectation) if (max_count + uniform_expectation) > 0 else 0
-    result['pli'] = float(pli)
+    contrast = (max_count - uniform_expectation) / (max_count + uniform_expectation) if (max_count + uniform_expectation) > 0 else 0.0
+    result['peak_to_mean_contrast'] = float(contrast)
+    result['pli'] = float(contrast)  # Retained for backwards compatibility
 
     # Rayleigh test for non-uniformity
     if len(spike_phases) > 0:
@@ -257,3 +270,89 @@ def phase_locking_index(
             result['rayleigh_pvalue'] = float(min(pval, 1.0))
 
     return result
+
+
+def pairwise_phase_consistency(
+    phases: np.ndarray,
+    axis: int = -1,
+) -> Union[float, np.ndarray]:
+    """Compute the Pairwise Phase Consistency (PPC) across angular samples (Vinck et al., 2010).
+
+    PPC is an unbiased estimator of rhythmic phase synchronization. Unlike the mean resultant
+    length or histogram-based phase-locking indices, PPC has an expected value that is
+    statistically independent of the number of spikes or observations (N).
+
+    Contract:
+        - Accepts phases directly in radians [-pi, pi) or [0, 2*pi). Phase extraction from
+          continuous signals is kept strictly separate.
+        - Evaluates along `axis` (default: -1).
+        - For N < 2 observations along the evaluated axis, PPC is non-identifiable and returns
+          NaN (never 0.0).
+        - Uses the exact O(N) resultant formulation:
+          PPC = (|sum e^(i*theta)|^2 - N) / (N * (N - 1))
+          which is mathematically identical to the O(N^2) double sum over all unique pairs.
+        - Identical phases yield 1.0.
+        - Rotation-invariant: PPC(theta + phi) == PPC(theta).
+        - Under a circular uniform distribution null, E[PPC] == 0.
+
+    Args:
+        phases: Array containing phase angles in radians.
+        axis: Axis along which to compute PPC (default: -1).
+
+    Returns:
+        PPC value (float for 1D input, or ndarray with `axis` reduced). Returns NaN where N < 2.
+    """
+    arr = np.asarray(phases, dtype=float)
+    n = arr.shape[axis] if arr.ndim > 0 else 0
+    if n < 2:
+        if arr.ndim <= 1:
+            return float("nan")
+        out_shape = list(arr.shape)
+        out_shape.pop(axis)
+        return np.full(out_shape, np.nan, dtype=float)
+
+    cos_sum = np.sum(np.cos(arr), axis=axis)
+    sin_sum = np.sum(np.sin(arr), axis=axis)
+    result = (cos_sum**2 + sin_sum**2 - n) / (n * (n - 1))
+    if np.ndim(result) == 0:
+        return float(result)
+    return result
+
+
+def gaussian_smooth_rate(
+    rate: np.ndarray,
+    bin_ms: float,
+    sigma_ms: float = 20.0,
+    axis: int = -1,
+) -> np.ndarray:
+    """Apply symmetrical, acausal Gaussian smoothing to a binned firing rate trace.
+
+    Unlike causal exponential smoothing (`causal_exp_smooth`), symmetrical Gaussian smoothing
+    does not introduce the systematic one-sided forward delay characteristic of causal filters.
+    It is suited for instantaneous firing rate visualization, PSTH curve presentation, and
+    population trajectory (PCA) state-space construction. Note: as an acausal filter, it smooths
+    bidirectionally across temporal boundaries.
+
+    Args:
+        rate: Array of firing rates (or spike counts) of arbitrary dimension.
+        bin_ms: Width of each time bin in milliseconds. Must be strictly positive.
+        sigma_ms: Standard deviation of Gaussian smoothing kernel in milliseconds (default: 20.0).
+            If sigma_ms <= 0, returns a copy of `rate` un-smoothed.
+        axis: Axis along which to smooth (default: -1, the time axis).
+
+    Returns:
+        Smoothed array of the same shape and float dtype as `rate`.
+
+    Raises:
+        ValueError: If `bin_ms <= 0`.
+    """
+    if bin_ms <= 0:
+        raise ValueError(f"bin_ms must be strictly positive; got {bin_ms}.")
+    arr = np.asarray(rate, dtype=float)
+    if sigma_ms <= 0:
+        return arr.copy()
+
+    from scipy.ndimage import gaussian_filter1d
+    sigma_bins = sigma_ms / bin_ms
+    return gaussian_filter1d(arr, sigma=sigma_bins, axis=axis, mode="reflect")
+

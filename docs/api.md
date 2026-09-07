@@ -1,6 +1,6 @@
 # Complete API Reference
 
-All 101 core functions, classes, and constants exported in the top-level jnwb namespace.
+All 111 core functions, classes, and constants exported in the top-level jnwb namespace.
 
 ## Module: jnwb.addressing
 
@@ -70,6 +70,13 @@ All 101 core functions, classes, and constants exported in the top-level jnwb na
 | jnwb.paths | constant/module | module |
 | jnwb.visual_qc | constant/module | module |
 
+## Module: jnwb.filtering
+
+| Symbol | Type | Signature / Description |
+|---|---|---|
+| jnwb.bandpass_filter | function | bandpass_filter(data: numpy.ndarray, fs: float, low_cut: float, high_cut: float, order: int = 4, zero_phase: bool = True, axis: int = -1) -> numpy.ndarray<br>*Apply a Butterworth bandpass filter using Second-Order Sections (SOS).* |
+| jnwb.notch_filter | function | notch_filter(data: numpy.ndarray, fs: float, freq: float = 60.0, q: float = 30.0, zero_phase: bool = True, axis: int = -1) -> numpy.ndarray<br>*Apply an IIR notch filter using Second-Order Sections (SOS) conversion.* |
+
 ## Module: jnwb.decoding
 
 | Symbol | Type | Signature / Description |
@@ -96,12 +103,10 @@ All 101 core functions, classes, and constants exported in the top-level jnwb na
 | jnwb.audit_electrodes | function | audit_electrodes(elec_df: pandas.core.frame.DataFrame, units_df: pandas.core.frame.DataFrame | None = None) -> Dict<br>*Audit electrode configuration and unit-to-electrode mapping coverage.* |
 | jnwb.audit_units | function | audit_units(units_df: pandas.core.frame.DataFrame) -> Dict<br>*Audit unit quality and completeness: spike-time coverage, and quality/SNR/firing-rate* |
 | jnwb.classify_unit_quality | function | classify_unit_quality(units_df: pandas.core.frame.DataFrame, thresholds: Dict[str, float] | None = None) -> pandas.core.frame.DataFrame<br>*Classify units by quality based on metrics.* |
-| jnwb.compare_old_new_criteria | function | compare_old_new_criteria(new_df: pandas.core.frame.DataFrame, old_df: pandas.core.frame.DataFrame, new_key: Tuple[str, str] = ('session', 'unit_row'), old_key: Tuple[str, str] = ('session_prefix', 'unit_row_idx'), class_col_new: str = 'is_omission_inclusion_new', class_col_old: str = 'is_Oplus') -> pandas.core.frame.DataFrame<br>*Diff two boolean unit-classification columns across two DataFrames on a join key.* |
 | jnwb.electrode_inventory | function | electrode_inventory(nwb_paths: str | pathlib.Path | List[str | pathlib.Path]) -> pandas.core.frame.DataFrame<br>*Build inventory of electrodes, mapping to units and areas.* |
 | jnwb.filter_by_criteria | function | filter_by_criteria(df: pandas.core.frame.DataFrame, criteria: Dict) -> pandas.core.frame.DataFrame<br>*Apply a criteria dict to a DataFrame (units, electrodes, or any other table).* |
 | jnwb.get_all_units_metadata | function | get_all_units_metadata(nwb_paths: str | pathlib.Path | List[str | pathlib.Path], filter_quality: bool = False, quality_threshold: float = 1.0) -> pandas.core.frame.DataFrame<br>*Extract all units and metadata from one or more NWB files.* |
 | jnwb.get_snr_analysis | function | get_snr_analysis(units_df: pandas.core.frame.DataFrame, snr_threshold: float = 1.0, detail: bool = False) -> Dict<br>*Analyze SNR distribution and quality.* |
-| jnwb.old_new_summary_table | function | old_new_summary_table(compared: pandas.core.frame.DataFrame, group_cols: Tuple[str, ...] = ('area', 'quality_tier')) -> pandas.core.frame.DataFrame<br>*Explicit gained/lost/unchanged counts per class per grouping column.* |
 | jnwb.unit_census_report | function | unit_census_report(units_df: pandas.core.frame.DataFrame, group_by: List[str] | None = None) -> pandas.core.frame.DataFrame<br>*Generate a census/summary report of units grouped by session/area/layer.* |
 
 ## Module: jnwb.onset_fitting
@@ -141,15 +146,18 @@ All 101 core functions, classes, and constants exported in the top-level jnwb na
 |---|---|---|
 | jnwb.DB_AGGREGATIONS | constant | ('mean_of_ratios', 'ratio_of_means')<br>*The two accepted estimands for `aggregate_to_db`; they differ, so the caller names one.* |
 | jnwb.aggregate_to_db | function | aggregate_to_db(power, baseline, *, how: str, aggregate_over=None, nan_policy: str = 'propagate')<br>*Form the ratio, aggregate on the ratio scale, then `10*log10` exactly once.* |
-| jnwb.band_power | function | band_power(lfp_trace: numpy.ndarray, sampling_rate: float, freq_range: Tuple[float, float], normalize: bool = True, baseline: numpy.ndarray | None = None, device: str = 'cpu') -> float<br>*Compute power in a frequency band.* |
+| jnwb.band_power | function | band_power(lfp_trace: numpy.ndarray, fs: float | None = None, sampling_rate: float | None = None, freq_range: Tuple[float, float] = (1.0, 90.0), normalize: bool = True, baseline: numpy.ndarray | None = None, device: str = 'cpu') -> float<br>*Compute power in a frequency band.* |
 | jnwb.bipolar_reference | function | bipolar_reference(channel_data: numpy.ndarray, channel_order: numpy.ndarray | None = None) -> numpy.ndarray<br>*Bipolar (adjacent-channel difference) re-reference along a probe's depth order.* |
+| jnwb.compute_multitaper_psd | function | compute_multitaper_psd(data: numpy.ndarray, fs: float, nw: float = 3.0, k_tapers: Optional[int] = None, axis: int = -1) -> Tuple[numpy.ndarray, numpy.ndarray]<br>*Compute power spectral density via the Discrete Prolate Spheroidal Sequences (DPSS) multitaper method.* |
 | jnwb.compute_psd | function | compute_psd(lfp_data: numpy.ndarray, fs: float)<br>*Welch power spectral density of a plain LFP array.* |
-| jnwb.cross_area_coherence | function | cross_area_coherence(lfp_area1: numpy.ndarray, lfp_area2: numpy.ndarray, sampling_rate: float, freq_bands: Dict[str, Tuple[float, float]] | None = None, device: str = 'cpu') -> Dict<br>*Compute frequency-resolved coherence between two LFP signals.* |
-| jnwb.harmonic_analysis | function | harmonic_analysis(lfp_trace: numpy.ndarray, sampling_rate: float, freq_range: Tuple[float, float] = (1.0, 90.0), harmonic_orders: int = 3, device: str = 'cpu') -> Dict<br>*Decompose LFP trace into fundamental and harmonic components.* |
-| jnwb.imaginary_coherency | function | imaginary_coherency(x: numpy.ndarray, y: numpy.ndarray, sampling_rate: float, freq_range: Tuple[float, float], nperseg: int | None = None, noverlap: int | None = None, device: str = 'cpu') -> Dict[str, float]<br>*Imaginary part of coherency (Nolte et al. 2004) between two continuous signals.* |
+| jnwb.cross_area_coherence | function | cross_area_coherence(lfp_area1: numpy.ndarray, lfp_area2: numpy.ndarray, fs: float | None = None, sampling_rate: float | None = None, freq_bands: Dict[str, Tuple[float, float]] | None = None, device: str = 'cpu') -> Dict<br>*Compute frequency-resolved coherence between two LFP signals.* |
+| jnwb.current_source_density_1d | function | current_source_density_1d(lfp_matrix: numpy.ndarray, pitch_um: float, conductivity_s_per_m: float, axis: int = 0) -> numpy.ndarray<br>*Compute physical 1D Current Source Density (CSD) along a laminar electrode array.* |
+| jnwb.harmonic_analysis | function | harmonic_analysis(lfp_trace: numpy.ndarray, fs: float | None = None, sampling_rate: float | None = None, freq_range: Tuple[float, float] = (1.0, 90.0), harmonic_orders: int = 3, device: str = 'cpu') -> Dict<br>*Decompose LFP trace into fundamental and harmonic components.* |
+| jnwb.imaginary_coherency | function | imaginary_coherency(x: numpy.ndarray, y: numpy.ndarray, fs: float | None = None, sampling_rate: float | None = None, freq_range: Tuple[float, float] = (1.0, 90.0), nperseg: int | None = None, noverlap: int | None = None, device: str = 'cpu') -> Dict[str, float]<br>*Imaginary part of coherency (Nolte et al. 2004) between two continuous signals.* |
 | jnwb.laplacian_reference | function | laplacian_reference(channel_data: numpy.ndarray, channel_order: numpy.ndarray | None = None) -> numpy.ndarray<br>*1D nearest-neighbor Laplacian re-reference along a probe's depth order.* |
-| jnwb.spectral_tilt | function | spectral_tilt(lfp_trace: numpy.ndarray, sampling_rate: float, freq_range: Tuple[float, float] = (1.0, 100.0), device: str = 'cpu') -> Dict<br>*Analyze 1/f spectral tilt (aperiodic component).* |
+| jnwb.spectral_tilt | function | spectral_tilt(lfp_trace: numpy.ndarray, fs: float | None = None, sampling_rate: float | None = None, freq_range: Tuple[float, float] = (1.0, 100.0), device: str = 'cpu') -> Dict<br>*Analyze 1/f spectral tilt (aperiodic component).* |
 | jnwb.to_db | function | to_db(ratio)<br>*``10*log10(ratio)``, the single point every power-ratio-to-dB conversion should pass* |
+| jnwb.voltage_curvature_1d | function | voltage_curvature_1d(lfp_matrix: numpy.ndarray, pitch_um: float, axis: int = 0) -> numpy.ndarray<br>*Compute the discrete second spatial derivative of extracellular potential along a laminar probe.* |
 
 ## Module: jnwb.spiking
 
@@ -157,7 +165,9 @@ All 101 core functions, classes, and constants exported in the top-level jnwb na
 |---|---|---|
 | jnwb.classify_response_significance | function | classify_response_significance(metrics: Dict[str, float], zscore_threshold: float = 1.96, min_spike_count: int = 5) -> Dict[str, bool | float]<br>*Classify unit response as significant based on metrics.* |
 | jnwb.compute_response_metrics | function | compute_response_metrics(spike_times: numpy.ndarray, epoch_onsets: numpy.ndarray, baseline_window: Tuple[float, float] = (-0.25, -0.05), response_window: Tuple[float, float] = (0.0, 0.15), z_score: bool = True) -> Dict[str, float]<br>*Compute firing rate and spike count metrics for stimulus responses.* |
-| jnwb.phase_locking_index | function | phase_locking_index(unit_spike_times: numpy.ndarray, lfp_phase: numpy.ndarray, lfp_timestamps: numpy.ndarray, n_bins: int = 18) -> Dict[str, float | numpy.ndarray]<br>*Compute phase-locking index (PLI) between spikes and LFP phase.* |
+| jnwb.gaussian_smooth_rate | function | gaussian_smooth_rate(rate: numpy.ndarray, bin_ms: float, sigma_ms: float = 20.0, axis: int = -1) -> numpy.ndarray<br>*Apply symmetrical, acausal Gaussian smoothing to a binned firing rate trace.* |
+| jnwb.pairwise_phase_consistency | function | pairwise_phase_consistency(phases: numpy.ndarray, axis: int = -1) -> Union[float, numpy.ndarray]<br>*Compute the Pairwise Phase Consistency (PPC) across angular samples (Vinck et al., 2010).* |
+| jnwb.phase_locking_index | function | phase_locking_index(unit_spike_times: numpy.ndarray, lfp_phase: numpy.ndarray, lfp_timestamps: numpy.ndarray, n_bins: int = 18) -> Dict[str, float | numpy.ndarray]<br>*Compute spike-LFP circular phase distribution, Rayleigh non-uniformity test, and descriptive peak-to-mean contrast. Note: 'pli' is a compatibility alias; use 'pairwise_phase_consistency' (PPC) for unbiased comparison across units.* |
 
 ## Module: jnwb.statistics
 
@@ -165,6 +175,7 @@ All 101 core functions, classes, and constants exported in the top-level jnwb na
 |---|---|---|
 | jnwb.StatisticalAnalysis | class | *Dual statistical testing with honest multiple-comparison handling.* |
 | jnwb.assign_subblock_quartiles | function | assign_subblock_quartiles(epochs_df: 'pd.DataFrame', n_quantiles: 'int' = 4) -> 'np.ndarray'<br>*Assign each row a temporal quantile bucket 0..n_quantiles-1 by its own start_time order.* |
+| jnwb.cluster_permutation_test | function | cluster_permutation_test(X: numpy.ndarray, Y: numpy.ndarray, *, paired: bool = False, groups: Optional[Union[numpy.ndarray, Tuple[numpy.ndarray, numpy.ndarray]]] = None, scheme: Optional[str] = None, threshold: float = 2.0, n_permutations: int = 1000, tail: str = 'both', rng: Optional[numpy.random.Generator] = None) -> Dict<br>*Non-parametric cluster-based permutation test for multidimensional signals (Maris & Oostenveld, 2007).* |
 | jnwb.cross_modal_comparison | function | cross_modal_comparison(tfr_data: 'np.ndarray', spike_data: 'np.ndarray', lag_range_ms: 'Tuple[int, int]' = (-500, 500), bin_ms: 'Optional[float]' = None) -> 'Dict'<br>*Trial-averaged correlation between a TFR-derived signal and a spike-count signal.* |
 | jnwb.detect_trial_cycles | function | detect_trial_cycles(epochs_df: 'pd.DataFrame', gap_factor: 'float' = 10.0) -> 'np.ndarray'<br>*Detect temporal cluster ("cycle") boundaries in a trial table via a gap threshold.* |
 | jnwb.fire_indicator | function | fire_indicator(spike_times: 'np.ndarray', onsets_s: 'np.ndarray', window_ms) -> 'np.ndarray'<br>*Vectorized boolean fire indicator, one entry per onset, constant window.* |

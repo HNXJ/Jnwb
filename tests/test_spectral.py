@@ -20,6 +20,9 @@ from jnwb.spectral import (
     laplacian_reference,
     CANONICAL_BANDS,
     compute_psd,
+    compute_multitaper_psd,
+    voltage_curvature_1d,
+    current_source_density_1d,
 )
 
 
@@ -36,10 +39,14 @@ class TestPublicImport:
         assert jnwb.laplacian_reference is laplacian_reference
         assert jnwb.CANONICAL_BANDS is CANONICAL_BANDS
         assert jnwb.compute_psd is compute_psd
+        assert jnwb.compute_multitaper_psd is compute_multitaper_psd
+        assert jnwb.voltage_curvature_1d is voltage_curvature_1d
+        assert jnwb.current_source_density_1d is current_source_density_1d
 
     def test_listed_in_jnwb_all(self):
         import jnwb
-        assert "compute_psd" in jnwb.__all__
+        for name in ("compute_psd", "compute_multitaper_psd", "voltage_curvature_1d", "current_source_density_1d"):
+            assert name in jnwb.__all__
 
 
 class TestComputePsd:
@@ -162,8 +169,8 @@ class TestBandPower:
 
     def test_tone_in_band_has_higher_power_than_out_of_band(self):
         trace, _ = _sine(10.0, sampling_rate=1000.0, duration_s=4.0, amplitude=5.0)
-        in_band = band_power(trace, 1000.0, (8, 12), normalize=False)
-        out_of_band = band_power(trace, 1000.0, (60, 80), normalize=False)
+        in_band = band_power(trace, fs=1000.0, freq_range=(8, 12), normalize=False)
+        out_of_band = band_power(trace, fs=1000.0, freq_range=(60, 80), normalize=False)
         assert in_band > out_of_band
 
 
@@ -303,3 +310,180 @@ class TestAggregateToDb:
         import jnwb
         assert jnwb.aggregate_to_db is aggregate_to_db
         assert jnwb.DB_AGGREGATIONS is DB_AGGREGATIONS
+
+
+class TestSpectralSamplingRateResolution:
+    """Verify that spectral routines accept both canonical `fs` and backwards-compatible `sampling_rate`."""
+
+    def test_fs_and_sampling_rate_equivalence(self):
+        fs = 1000.0
+        t = np.arange(0, 1.0, 1.0 / fs)
+        sig1 = np.sin(2 * np.pi * 10 * t)
+        sig2 = np.sin(2 * np.pi * 10 * t + 0.5)
+
+        # 1. harmonic_analysis
+        res_fs = harmonic_analysis(sig1, fs=fs)
+        res_sr = harmonic_analysis(sig1, sampling_rate=fs)
+        assert res_fs["fundamental_freq"] == pytest.approx(res_sr["fundamental_freq"])
+
+        # 2. cross_area_coherence
+        res_coh_fs = cross_area_coherence(sig1, sig2, fs=fs)
+        res_coh_sr = cross_area_coherence(sig1, sig2, sampling_rate=fs)
+        np.testing.assert_allclose(res_coh_fs["frequencies"], res_coh_sr["frequencies"])
+        np.testing.assert_allclose(res_coh_fs["coherence_spectrum"], res_coh_sr["coherence_spectrum"])
+
+        # 3. spectral_tilt
+        res_tilt_fs = spectral_tilt(sig1, fs=fs)
+        res_tilt_sr = spectral_tilt(sig1, sampling_rate=fs)
+        assert res_tilt_fs["exponent"] == pytest.approx(res_tilt_sr["exponent"])
+        assert res_tilt_fs["fit_quality"] == pytest.approx(res_tilt_sr["fit_quality"])
+
+        # 4. band_power
+        bp_fs = band_power(sig1, fs=fs, freq_range=(8.0, 14.0))
+        bp_sr = band_power(sig1, sampling_rate=fs, freq_range=(8.0, 14.0))
+        assert bp_fs == pytest.approx(bp_sr)
+
+        # 5. imaginary_coherency
+        res_icoh_fs = imaginary_coherency(sig1, sig2, fs=fs)
+        res_icoh_sr = imaginary_coherency(sig1, sig2, sampling_rate=fs)
+        assert res_icoh_fs["icoh_mean"] == pytest.approx(res_icoh_sr["icoh_mean"])
+        assert res_icoh_fs["coh_mag_mean"] == pytest.approx(res_icoh_sr["coh_mag_mean"])
+
+    def test_conflicting_fs_and_sampling_rate_raises(self):
+        sig = np.ones(100)
+        with pytest.raises(ValueError, match="Conflicting"):
+            harmonic_analysis(sig, fs=1000.0, sampling_rate=2000.0)
+
+        with pytest.raises(ValueError, match="Conflicting"):
+            cross_area_coherence(sig, sig, fs=1000.0, sampling_rate=2000.0)
+
+        with pytest.raises(ValueError, match="Conflicting"):
+            spectral_tilt(sig, fs=1000.0, sampling_rate=2000.0)
+
+        with pytest.raises(ValueError, match="Conflicting"):
+            band_power(sig, fs=1000.0, sampling_rate=2000.0)
+
+        with pytest.raises(ValueError, match="Conflicting"):
+            imaginary_coherency(sig, sig, fs=1000.0, sampling_rate=2000.0)
+
+    def test_missing_both_fs_and_sampling_rate_raises(self):
+        sig = np.ones(100)
+        with pytest.raises(ValueError, match="requires sampling rate `fs`"):
+            harmonic_analysis(sig)
+
+        with pytest.raises(ValueError, match="requires sampling rate `fs`"):
+            cross_area_coherence(sig, sig)
+
+        with pytest.raises(ValueError, match="requires sampling rate `fs`"):
+            spectral_tilt(sig)
+
+        with pytest.raises(ValueError, match="requires sampling rate `fs`"):
+            band_power(sig)
+
+        with pytest.raises(ValueError, match="requires sampling rate `fs`"):
+            imaginary_coherency(sig, sig)
+
+
+class TestComputeMultitaperPsd:
+    def test_parseval_power_recovery_white_noise(self):
+        rng = np.random.default_rng(100)
+        fs = 1000.0
+        n_samples = 2000
+        x = rng.standard_normal(n_samples)
+        freqs, psd = compute_multitaper_psd(x, fs=fs, nw=3.0, k_tapers=5)
+        df = freqs[1] - freqs[0]
+        integrated_pwr = np.sum(psd) * df
+        empirical_var = np.var(x, ddof=0)
+        assert integrated_pwr == pytest.approx(empirical_var, rel=0.08)
+
+    def test_sinusoid_frequency_recovery(self):
+        fs = 1000.0
+        t = np.arange(0, 2.0, 1.0 / fs)
+        f0 = 35.0
+        x = np.sin(2 * np.pi * f0 * t)
+        freqs, psd = compute_multitaper_psd(x, fs=fs, nw=2.5)
+        peak_freq = freqs[np.argmax(psd)]
+        assert abs(peak_freq - f0) < 1.0
+
+    def test_multidimensional_axes(self):
+        rng = np.random.default_rng(101)
+        data = rng.standard_normal((3, 500))
+        freqs1, psd1 = compute_multitaper_psd(data, fs=500.0, axis=-1)
+        freqs0, psd0 = compute_multitaper_psd(data.T, fs=500.0, axis=0)
+        np.testing.assert_allclose(freqs1, freqs0)
+        np.testing.assert_allclose(psd1, psd0.T)
+
+    def test_zero_signal_returns_zeros(self):
+        zeros = np.zeros(200)
+        freqs, psd = compute_multitaper_psd(zeros, fs=100.0)
+        np.testing.assert_allclose(psd, 0.0)
+
+    def test_invalid_parameters_raise(self):
+        x = np.ones(100)
+        with pytest.raises(ValueError, match="strictly positive"):
+            compute_multitaper_psd(x, fs=0.0)
+        with pytest.raises(ValueError, match="strictly positive"):
+            compute_multitaper_psd(x, fs=1000.0, nw=-1.0)
+        with pytest.raises(ValueError, match="between 1 and signal length"):
+            compute_multitaper_psd(x, fs=1000.0, k_tapers=0)
+        with pytest.raises(ValueError, match="between 1 and signal length"):
+            compute_multitaper_psd(x, fs=1000.0, k_tapers=200)
+
+    def test_nan_raises(self):
+        x = np.ones(100)
+        x[10] = np.nan
+        with pytest.raises(ValueError, match="NaN"):
+            compute_multitaper_psd(x, fs=1000.0)
+
+
+class TestVoltageCurvatureAndCSD:
+    def test_known_quadratic_potential_curvature(self):
+        # Full quadratic potential: V(z) = a * z^2 + b * z + c (in Volts)
+        # Analytical 1st derivative: dV/dz = 2*a*z + b (in V/m)
+        # Analytical 2nd derivative: d^2V/dz^2 = 2*a (in V/m^2, constant across all z)
+        # Physical CSD: CSD(z) = -sigma * d^2V/dz^2 = -2 * a * sigma (in A/m^3)
+        a = 3.5    # V / m^2
+        b = -1.2   # V / m
+        c = 0.05   # V
+        pitch_um = 50.0  # 50 micrometers inter-contact spacing
+        pitch_m = pitch_um * 1e-6  # 5e-5 m
+        n_contacts = 12
+        z_m = np.arange(n_contacts) * pitch_m  # depth in meters
+        v_profile = a * (z_m ** 2) + b * z_m + c  # potential in Volts
+        # Broadcast across 100 time samples
+        lfp = np.tile(v_profile[:, None], (1, 100))
+
+        # Discrete second spatial derivative: curvature in V/m^2
+        curvature = voltage_curvature_1d(lfp, pitch_um=pitch_um, axis=0)
+        assert curvature.shape == (n_contacts - 2, 100)
+        # For any quadratic polynomial, the second central difference is exact:
+        # (V(z+h) - 2*V(z) + V(z-h)) / h^2 = 2*a
+        np.testing.assert_allclose(curvature, 2.0 * a, rtol=1e-6)
+
+        # Physical CSD with physiological conductivity sigma = 0.3 S/m
+        sigma = 0.3  # S/m = A / (V * m)
+        csd = current_source_density_1d(lfp, pitch_um=pitch_um, conductivity_s_per_m=sigma, axis=0)
+        assert csd.shape == (n_contacts - 2, 100)
+        expected_csd = -sigma * (2.0 * a)  # A/m^3
+        np.testing.assert_allclose(csd, expected_csd, rtol=1e-6)
+
+    def test_pitch_squared_scaling(self):
+        lfp = np.tile(np.array([1.0, 3.0, 2.0, 4.0, 1.0])[:, None], (1, 10))
+        curv_50 = voltage_curvature_1d(lfp, pitch_um=50.0)
+        curv_100 = voltage_curvature_1d(lfp, pitch_um=100.0)
+        # Doubling pitch must reduce curvature by factor of 4 (1/delta_z^2)
+        np.testing.assert_allclose(curv_50, curv_100 * 4.0)
+
+    def test_csd_requires_positive_conductivity(self):
+        lfp = np.ones((5, 10))
+        with pytest.raises(ValueError, match="strictly positive"):
+            current_source_density_1d(lfp, pitch_um=50.0, conductivity_s_per_m=0.0)
+        with pytest.raises(ValueError, match="strictly positive"):
+            current_source_density_1d(lfp, pitch_um=50.0, conductivity_s_per_m=-0.3)
+
+    def test_too_few_channels_raises(self):
+        lfp = np.ones((2, 10))
+        with pytest.raises(ValueError, match="at least 3 channels"):
+            voltage_curvature_1d(lfp, pitch_um=50.0)
+
+

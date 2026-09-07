@@ -24,14 +24,18 @@ bands = jnwb.CANONICAL_BANDS
 # - high_gamma: (50.0, 80.0) Hz
 ```
 
-### Power Spectral Density (`compute_psd`) & Band Power (`band_power`)
+### Power Spectral Density (`compute_psd`, `compute_multitaper_psd`) & Band Power (`band_power`)
 
 ```python
 # Compute Welch PSD (returns frequencies and psd arrays)
 freqs, psd = jnwb.compute_psd(lfp_trace, fs=1000.0)
 
+# Compute DPSS multitaper PSD with explicit energy normalization
+# nw: time-half-bandwidth product; k_tapers defaults to int(2*nw - 1)
+freqs_mt, psd_mt = jnwb.compute_multitaper_psd(lfp_trace, fs=1000.0, nw=3.0, k_tapers=5)
+
 # Extract scalar mean power in a specific frequency range (e.g. beta: 14-30 Hz)
-beta_power_val = jnwb.band_power(lfp_trace, sampling_rate=1000.0, freq_range=(14.0, 30.0))
+beta_power_val = jnwb.band_power(lfp_trace, fs=1000.0, freq_range=(14.0, 30.0))
 ```
 
 ### Decibel Formation (`aggregate_to_db`, `to_db`, `DB_AGGREGATIONS`)
@@ -86,14 +90,32 @@ NaNs behind, so this is a real choice, but never a silent one.
 
 ```python
 # Estimate 1/f spectral tilt / exponent
-tilt_res = jnwb.spectral_tilt(lfp_trace, sampling_rate=1000.0, freq_range=(1.0, 100.0))
+tilt_res = jnwb.spectral_tilt(lfp_trace, fs=1000.0, freq_range=(1.0, 100.0))
 
 # Harmonic distortion analysis
-harmonics = jnwb.harmonic_analysis(lfp_trace, sampling_rate=1000.0, harmonic_orders=3)
+harmonics = jnwb.harmonic_analysis(lfp_trace, fs=1000.0, harmonic_orders=3)
 
 # Spatial referencing schemes
 bipolar_data = jnwb.bipolar_reference(lfp_multichannel)
 laplacian_data = jnwb.laplacian_reference(lfp_multichannel)
+
+# 1D Voltage Curvature (d2V/dz2 in V/m^2) and Current Source Density (CSD in A/m^3)
+# lfp_probe: (n_channels, n_times) in Volts, ordered along probe depth
+curv = jnwb.voltage_curvature_1d(lfp_probe, pitch_um=100.0, axis=0)
+# CSD requires explicit extracellular conductivity (e.g. 0.3 S/m for cortex)
+csd = jnwb.current_source_density_1d(lfp_probe, pitch_um=100.0, conductivity_s_per_m=0.3, axis=0)
+```
+
+### Digital Filtering (`bandpass_filter`, `notch_filter`)
+
+Zero-phase (`zero_phase=True`, acausal forward-backward) and causal (`zero_phase=False`) filtering via Second-Order Sections (SOS):
+
+```python
+# Zero-phase Butterworth bandpass filter (14-30 Hz beta band)
+beta_lfp = jnwb.bandpass_filter(lfp_trace, fs=1000.0, low_cut=14.0, high_cut=30.0, order=4, zero_phase=True)
+
+# 60 Hz line-noise notch filter
+clean_lfp = jnwb.notch_filter(lfp_trace, fs=1000.0, freq=60.0, q=30.0, zero_phase=True)
 ```
 
 ![Power Spectral Density and 1/f Aperiodic Tilt](assets/figures/fig04_psd_spectral_tilt.png)
@@ -110,7 +132,7 @@ Quantifies frequency-resolved phase synchronization between two LFP signals:
 coh_dict = jnwb.cross_area_coherence(
     lfp_area1,
     lfp_area2,
-    sampling_rate=1000.0,
+    fs=1000.0,
     freq_bands=jnwb.CANONICAL_BANDS
 )
 # Returns dict containing:
@@ -127,7 +149,7 @@ Computes imaginary coherency to eliminate volume conduction / zero-lag field spr
 imag_coh = jnwb.imaginary_coherency(
     lfp_area1,
     lfp_area2,
-    sampling_rate=1000.0,
+    fs=1000.0,
     freq_range=(15.0, 30.0)
 )
 ```

@@ -93,20 +93,21 @@ $$\text{claim} \in \{\text{observed}, \text{derived}, \text{inferred}, \text{ass
 |--------|---------------------|------------------------------------------|
 | `paths` | Data root discovery & volume remap management | `paths` |
 | `addressing` | Spatial channel-to-area and depth-to-layer addressing | `map_peak_channel_to_area`, `classify_layer_from_depth`, `enrich_units_dataframe` |
-| `metadata` | Unit quality classification, census, & SNR auditing | `get_all_units_metadata`, `classify_unit_quality`, `unit_census_report`, `get_snr_analysis`, `filter_by_criteria`, `audit_units`, `audit_electrodes`, `assign_quality_tier`, `compare_old_new_criteria`, `old_new_summary_table`, `electrode_inventory` |
+| `metadata` | Unit quality classification, census, & SNR auditing | `get_all_units_metadata`, `classify_unit_quality`, `unit_census_report`, `get_snr_analysis`, `filter_by_criteria`, `audit_units`, `audit_electrodes`, `assign_quality_tier`, `electrode_inventory` |
+| `filtering` | Zero-phase & causal Butterworth bandpass and notch SOS filters | `bandpass_filter`, `notch_filter` |
 | `ontology` | Structured query objects and event referencing | `Query`, `Dataset`, `AlignedDataset`, `Alignment`, `EpochCollection`, `Question`, `Result`, `Interpretation`, `Figure`, `Provenance`, `Lineage` |
 | `jrsa` | Representational Similarity Analysis (RDMs, metrics) | `jrsa`, `JRSAResult` |
-| `spectral` | Multi-taper spectral analysis, coherence, and PLV | `compute_psd`, `band_power`, `spectral_tilt`, `harmonic_analysis`, `imaginary_coherency`, `cross_area_coherence`, `bipolar_reference`, `laplacian_reference`, `to_db`, `CANONICAL_BANDS` |
+| `spectral` | Multi-taper spectral analysis, coherence, CSD, and PLV | `compute_psd`, `compute_multitaper_psd`, `band_power`, `spectral_tilt`, `voltage_curvature_1d`, `current_source_density_1d`, `harmonic_analysis`, `imaginary_coherency`, `cross_area_coherence`, `bipolar_reference`, `laplacian_reference`, `to_db`, `CANONICAL_BANDS` |
 | `tfr_accumulator` | Streaming trial-wise TFR accumulation | `TFRAccumulator`, `assert_mergeable` |
 | `compression` | TFR sparse quantization and storage compression | `compress_fp32` |
 | `analyzers` | High-level session analyzers | `TFRAnalyzer`, `UnitAnalyzer`, `PopulationAnalyzer` |
 | `connectivity` | Directed connectivity, Granger, PSI, Transfer Entropy, MI | `granger`, `granger_spectral`, `granger_causality`, `phase_slope_index`, `transfer_entropy`, `directed_connectivity`, `directed_network`, `network_topology`, `spike_mutual_information`, `spike_count_mutual_information`, `binary_occupancy_mutual_information`, `bin_spikes`, `as_trials`, `DirectedResult` |
 | `artifact_detection` | Channel and trial correlation matrix artifact detection | `channel_correlation_matrix`, `bad_channels_from_correlation`, `trial_correlation_matrix`, `bad_trials_single_channel`, `consensus_bad_trials` |
 | `artifact_repair` | Cross-channel synchrony & cross-trial median repair | `repair_lfp_trials`, `repair_band_artifacts` |
-| `spiking` | Spike metrics, significance testing, phase locking | `compute_response_metrics`, `classify_response_significance`, `phase_locking_index` |
+| `spiking` | Spike metrics, significance testing, phase locking & PPC | `compute_response_metrics`, `classify_response_significance`, `phase_locking_index`, `pairwise_phase_consistency`, `gaussian_smooth_rate` |
 | `onset_fitting` | Causal exponential smoothing & bounded onset latency fitting | `causal_exp_smooth`, `fit_exponential_onset`, `onset_model` |
 | `trajectory` | State-space neural population trajectories | `build_time_resolved_matrix`, `compute_population_trajectory` |
-| `statistics` | Bootstrap CIs, permutation nulls, paired fire tests, FDR | `StatisticalAnalysis`, `rate_in_window`, `fires_in_window`, `fire_indicator`, `paired_fire_prob_test`, `shuffle_pvalue_paired`, `shuffle_pvalue_unpaired`, `detect_trial_cycles`, `assign_subblock_quartiles`, `shuffle_r2_ci`, `cross_modal_comparison` |
+| `statistics` | Bootstrap CIs, permutation nulls, paired fire tests, cluster tests, FDR | `StatisticalAnalysis`, `rate_in_window`, `fires_in_window`, `fire_indicator`, `paired_fire_prob_test`, `shuffle_pvalue_paired`, `shuffle_pvalue_unpaired`, `cluster_permutation_test`, `detect_trial_cycles`, `assign_subblock_quartiles`, `shuffle_r2_ci`, `cross_modal_comparison` |
 | `permutation` | Grouped (`within_group`) and global label permutation | `permute_labels`, `build_permutation_plan` |
 | `decoding` | Nested cross-validated linear SVM population decoding | `nested_cv_linear_svm`, `majority_baseline`, `fold_majority_baseline`, `assign_outer_folds`, `build_inner_validation_partitions`, `build_representation_ladder` |
 | `visual_qc` | Multi-panel unit waveform and session QC figures | `visual_qc` |

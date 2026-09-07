@@ -170,6 +170,7 @@ from .statistics import (
     rate_in_window,
     shuffle_pvalue_paired,
     shuffle_pvalue_unpaired,
+    cluster_permutation_test,
     detect_trial_cycles,
     assign_subblock_quartiles,
     shuffle_r2_ci,
@@ -220,8 +221,12 @@ from .metadata import (
     audit_units,
     audit_electrodes,
     assign_quality_tier,
-    compare_old_new_criteria,
-    old_new_summary_table,
+)
+
+# Digital filtering (SOS Butterworth bandpass and IIR notch)
+from .filtering import (
+    bandpass_filter,
+    notch_filter,
 )
 
 # Generic spectral analysis: band-limited power, cross-area coherence, 1/f tilt, imaginary
@@ -240,6 +245,9 @@ from .spectral import (
     laplacian_reference,
     CANONICAL_BANDS,
     compute_psd,
+    compute_multitaper_psd,
+    voltage_curvature_1d,
+    current_source_density_1d,
 )
 
 # Modality-agnostic functional connectivity: mutual information, Granger causality, phase
@@ -288,6 +296,8 @@ from .spiking import (
     compute_response_metrics,
     classify_response_significance,
     phase_locking_index,
+    pairwise_phase_consistency,
+    gaussian_smooth_rate,
 )
 
 # Generic plotting utilities: vector-graphics setup, tight auto-scaled axes, multi-page/format
@@ -344,6 +354,7 @@ __all__ = [
     'rate_in_window',
     'shuffle_pvalue_paired',
     'shuffle_pvalue_unpaired',
+    'cluster_permutation_test',
     'detect_trial_cycles',
     'assign_subblock_quartiles',
     'shuffle_r2_ci',
@@ -386,8 +397,10 @@ __all__ = [
     'audit_units',
     'audit_electrodes',
     'assign_quality_tier',
-    'compare_old_new_criteria',
-    'old_new_summary_table',
+
+    # Digital filtering
+    'bandpass_filter',
+    'notch_filter',
 
     # Spectral analysis
     'to_db',
@@ -402,6 +415,9 @@ __all__ = [
     'laplacian_reference',
     'CANONICAL_BANDS',
     'compute_psd',
+    'compute_multitaper_psd',
+    'voltage_curvature_1d',
+    'current_source_density_1d',
     'complex_tfr',
     'morlet_wavelet',
     'ComplexTFR',
@@ -434,6 +450,8 @@ __all__ = [
     'compute_response_metrics',
     'classify_response_significance',
     'phase_locking_index',
+    'pairwise_phase_consistency',
+    'gaussian_smooth_rate',
 
     # Plotting utilities
     'setup_vector_graphics',

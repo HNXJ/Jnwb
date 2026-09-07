@@ -44,6 +44,26 @@ CANONICAL_BANDS: Dict[str, Tuple[float, float]] = {
 }
 
 
+def _resolve_fs(
+    fs: Optional[float] = None,
+    sampling_rate: Optional[float] = None,
+    func_name: str = "function",
+) -> float:
+    """Resolve sampling rate from canonical `fs` or legacy alias `sampling_rate`."""
+    if fs is not None and sampling_rate is not None:
+        if fs != sampling_rate:
+            raise ValueError(
+                f"Conflicting values provided to {func_name}: fs={fs}, sampling_rate={sampling_rate}. "
+                "Specify only one (prefer fs)."
+            )
+        return float(fs)
+    if fs is not None:
+        return float(fs)
+    if sampling_rate is not None:
+        return float(sampling_rate)
+    raise ValueError(f"{func_name} requires sampling rate `fs` (in Hz).")
+
+
 def to_db(ratio):
     """``10*log10(ratio)``, the single point every power-ratio-to-dB conversion should pass
     through -- the project's "log last" rule (CLAUDE.md tripwire #3: average power, divide by
@@ -168,7 +188,8 @@ def compute_psd(lfp_data: np.ndarray, fs: float):
 
 def harmonic_analysis(
     lfp_trace: np.ndarray,
-    sampling_rate: float,
+    fs: Optional[float] = None,
+    sampling_rate: Optional[float] = None,
     freq_range: Tuple[float, float] = (1.0, 90.0),
     harmonic_orders: int = 3,
     device: str = 'cpu'
@@ -181,7 +202,8 @@ def harmonic_analysis(
 
     Args:
         lfp_trace: Time series data (1D array, voltage)
-        sampling_rate: Sampling frequency (Hz)
+        fs: Sampling frequency in Hz (canonical).
+        sampling_rate: Supported alias for `fs` in Hz.
         freq_range: (min, max) frequency bounds for analysis (Hz)
         harmonic_orders: Number of harmonic multiples to track
         device: 'cpu' or 'cuda' (GPU acceleration via CuPy)
@@ -195,9 +217,10 @@ def harmonic_analysis(
         - harmonic_ratio: Power ratio (fundamental / sum of harmonics)
 
     Example:
-        >>> analysis = harmonic_analysis(lfp_data, sampling_rate=1000.0)
+        >>> analysis = harmonic_analysis(lfp_data, fs=1000.0)
         >>> print(f"Theta fundamental: {analysis['fundamental_freq']:.1f} Hz")
     """
+    fs = _resolve_fs(fs, sampling_rate, "harmonic_analysis")
     result = {
         'fundamental_freq': 0.0,
         'harmonics': {},
@@ -212,12 +235,12 @@ def harmonic_analysis(
     # Compute power spectrum
     if device == 'cuda':
         try:
-            frequencies, pxx, _, _ = _welch_csd_gpu(lfp_trace, lfp_trace, sampling_rate, min(len(lfp_trace), 4096))
+            frequencies, pxx, _, _ = _welch_csd_gpu(lfp_trace, lfp_trace, fs, min(len(lfp_trace), 4096))
         except Exception as e:
             log.warning(f"GPU welch failed: {e}. Falling back to CPU.")
             frequencies, pxx = signal.welch(
                 lfp_trace,
-                fs=sampling_rate,
+                fs=fs,
                 window='hann',
                 nperseg=min(len(lfp_trace), 4096),
                 noverlap=None
@@ -225,7 +248,7 @@ def harmonic_analysis(
     else:
         frequencies, pxx = signal.welch(
             lfp_trace,
-            fs=sampling_rate,
+            fs=fs,
             window='hann',
             nperseg=min(len(lfp_trace), 4096),
             noverlap=None
@@ -279,7 +302,8 @@ def harmonic_analysis(
 def cross_area_coherence(
     lfp_area1: np.ndarray,
     lfp_area2: np.ndarray,
-    sampling_rate: float,
+    fs: Optional[float] = None,
+    sampling_rate: Optional[float] = None,
     freq_bands: Optional[Dict[str, Tuple[float, float]]] = None,
     device: str = 'cpu'
 ) -> Dict:
@@ -292,7 +316,8 @@ def cross_area_coherence(
     Args:
         lfp_area1: Time series from area 1
         lfp_area2: Time series from area 2
-        sampling_rate: Sampling frequency (Hz)
+        fs: Sampling frequency in Hz (canonical).
+        sampling_rate: Supported alias for `fs` in Hz.
         freq_bands: Dict of {'band_name': (freq_min, freq_max)}
                    Default: CANONICAL_BANDS (theta 4-8, alpha 8-14, beta 14-30,
                    low_gamma 30-50, high_gamma 50-80).
@@ -307,9 +332,10 @@ def cross_area_coherence(
         - peak_coherence_freq: Frequency with highest coherence (Hz)
 
     Example:
-        >>> coh = cross_area_coherence(v1_lfp, pfc_lfp, sampling_rate=1000.0)
+        >>> coh = cross_area_coherence(v1_lfp, pfc_lfp, fs=1000.0)
         >>> print(f"Alpha coherence: {coh['band_coherence']['alpha']:.3f}")
     """
+    fs = _resolve_fs(fs, sampling_rate, "cross_area_coherence")
     if freq_bands is None:
         # INTENTIONAL BREAK (2026-08-04). The former default was the
         # pre-correction set (delta 1-4, alpha 8-12, beta 12-30, low_gamma 30-55,
@@ -339,7 +365,7 @@ def cross_area_coherence(
     if device == 'cuda':
         try:
             frequencies, psd_x, psd_y, csd_xy = _welch_csd_gpu(
-                lfp_area1, lfp_area2, sampling_rate, min(len(lfp_area1), 4096)
+                lfp_area1, lfp_area2, fs, min(len(lfp_area1), 4096)
             )
             # Avoid division by zero
             denom = psd_x * psd_y
@@ -351,7 +377,7 @@ def cross_area_coherence(
             frequencies, coherency = signal.coherence(
                 lfp_area1,
                 lfp_area2,
-                fs=sampling_rate,
+                fs=fs,
                 nperseg=min(len(lfp_area1), 4096),
                 noverlap=None
             )
@@ -359,7 +385,7 @@ def cross_area_coherence(
         frequencies, coherency = signal.coherence(
             lfp_area1,
             lfp_area2,
-            fs=sampling_rate,
+            fs=fs,
             nperseg=min(len(lfp_area1), 4096),
             noverlap=None
         )
@@ -397,16 +423,16 @@ def cross_area_coherence(
                 if device == 'cuda':
                     try:
                         _, psd_x_shuf, psd_y_shuf, csd_xy_shuf = _welch_csd_gpu(
-                            lfp_area1, lfp_y_shuffled, sampling_rate, min(len(lfp_area1), 4096)
+                            lfp_area1, lfp_y_shuffled, fs, min(len(lfp_area1), 4096)
                         )
                         denom_shuf = psd_x_shuf * psd_y_shuf
                         coh_shuf = np.zeros_like(csd_xy_shuf, dtype=float)
                         shuf_mask = denom_shuf > 0
                         coh_shuf[shuf_mask] = np.abs(csd_xy_shuf[shuf_mask]) ** 2 / denom_shuf[shuf_mask]
                     except Exception:
-                        _, coh_shuf = signal.coherence(lfp_area1, lfp_y_shuffled, fs=sampling_rate, nperseg=min(len(lfp_area1), 4096), noverlap=None)
+                        _, coh_shuf = signal.coherence(lfp_area1, lfp_y_shuffled, fs=fs, nperseg=min(len(lfp_area1), 4096), noverlap=None)
                 else:
-                    _, coh_shuf = signal.coherence(lfp_area1, lfp_y_shuffled, fs=sampling_rate, nperseg=min(len(lfp_area1), 4096), noverlap=None)
+                    _, coh_shuf = signal.coherence(lfp_area1, lfp_y_shuffled, fs=fs, nperseg=min(len(lfp_area1), 4096), noverlap=None)
                 
                 band_coh_shuf = coh_shuf[mask] if len(coh_shuf) > 0 else np.array([0.0])
                 surrogate_cohs.append(np.mean(band_coh_shuf))
@@ -419,32 +445,41 @@ def cross_area_coherence(
 
 def spectral_tilt(
     lfp_trace: np.ndarray,
-    sampling_rate: float,
+    fs: Optional[float] = None,
+    sampling_rate: Optional[float] = None,
     freq_range: Tuple[float, float] = (1.0, 100.0),
     device: str = 'cpu'
 ) -> Dict:
     """
-    Analyze 1/f spectral tilt (aperiodic component).
+    Fit 1/f spectral tilt via linear regression of log10 power versus log10 frequency.
 
-    The aperiodic (1/f) slope reflects broadband neural activity and is useful
-    for understanding general network state (higher slope = more high-frequency content).
+    Fits log10(Power) = log10(Offset) + exponent * log10(freq) over the specified
+    frequency range.
+
+    Important Scientific Distinction:
+        This routine performs an unconstrained linear fit across the chosen band; it does
+        NOT model or isolate narrow-band oscillatory peaks (e.g. alpha or gamma rhythms).
+        Prominent rhythms falling within `freq_range` will tilt the regression line. Select
+        the fitting bounds carefully to minimize contamination by narrowband oscillations.
 
     Args:
         lfp_trace: Time series data
-        sampling_rate: Sampling frequency (Hz)
-        freq_range: Frequency range for fitting
+        fs: Sampling frequency in Hz (canonical).
+        sampling_rate: Supported alias for `fs` in Hz.
+        freq_range: Frequency range (f_min, f_max) in Hz for regression fitting
         device: 'cpu' or 'cuda' (GPU acceleration via CuPy)
 
     Returns:
         Dict with:
-        - exponent: 1/f exponent (slope, negative value)
-        - offset: Power at 1 Hz (intercept)
-        - fit_quality: R-squared of fit
+        - exponent: log-log slope (typically negative)
+        - offset: power at 1 Hz (10^intercept)
+        - fit_quality: R-squared of the linear fit
 
     Example:
-        >>> tilt = spectral_tilt(lfp_data, sampling_rate=1000.0)
+        >>> tilt = spectral_tilt(lfp_data, fs=1000.0, freq_range=(1.0, 100.0))
         >>> print(f"Spectral exponent: {tilt['exponent']:.2f}")
     """
+    fs = _resolve_fs(fs, sampling_rate, "spectral_tilt")
     result = {
         'exponent': 0.0,
         'offset': 0.0,
@@ -457,18 +492,18 @@ def spectral_tilt(
     # Compute power spectrum
     if device == 'cuda':
         try:
-            frequencies, pxx, _, _ = _welch_csd_gpu(lfp_trace, lfp_trace, sampling_rate, min(len(lfp_trace), 4096))
+            frequencies, pxx, _, _ = _welch_csd_gpu(lfp_trace, lfp_trace, fs, min(len(lfp_trace), 4096))
         except Exception as e:
             log.warning(f"GPU welch failed: {e}. Falling back to CPU.")
             frequencies, pxx = signal.welch(
                 lfp_trace,
-                fs=sampling_rate,
+                fs=fs,
                 nperseg=min(len(lfp_trace), 4096)
             )
     else:
         frequencies, pxx = signal.welch(
             lfp_trace,
-            fs=sampling_rate,
+            fs=fs,
             nperseg=min(len(lfp_trace), 4096)
         )
 
@@ -510,8 +545,9 @@ def spectral_tilt(
 
 def band_power(
     lfp_trace: np.ndarray,
-    sampling_rate: float,
-    freq_range: Tuple[float, float],
+    fs: Optional[float] = None,
+    sampling_rate: Optional[float] = None,
+    freq_range: Tuple[float, float] = (1.0, 90.0),
     normalize: bool = True,
     baseline: Optional[np.ndarray] = None,
     device: str = 'cpu'
@@ -521,7 +557,8 @@ def band_power(
 
     Args:
         lfp_trace: Time series data
-        sampling_rate: Sampling frequency (Hz)
+        fs: Sampling frequency in Hz (canonical).
+        sampling_rate: Supported alias for `fs` in Hz.
         freq_range: (min_freq, max_freq) in Hz
         normalize: If True, return as dB relative to baseline
         baseline: Baseline time series for normalization (optional)
@@ -531,28 +568,29 @@ def band_power(
         Power in band (units depend on normalize flag)
 
     Example:
-        >>> theta_power = band_power(lfp_data, 1000.0, (4, 8))
-        >>> baseline_power = band_power(baseline_lfp, 1000.0, (4, 8), normalize=False)
-        >>> normalized_power = band_power(lfp_data, 1000.0, (4, 8), baseline=baseline_lfp)
+        >>> theta_power = band_power(lfp_data, fs=1000.0, freq_range=(4, 8))
+        >>> baseline_power = band_power(baseline_lfp, fs=1000.0, freq_range=(4, 8), normalize=False)
+        >>> normalized_power = band_power(lfp_data, fs=1000.0, freq_range=(4, 8), baseline=baseline_lfp)
     """
+    fs = _resolve_fs(fs, sampling_rate, "band_power")
     if len(lfp_trace) == 0:
         return 0.0
 
     # Compute power spectrum
     if device == 'cuda':
         try:
-            frequencies, pxx, _, _ = _welch_csd_gpu(lfp_trace, lfp_trace, sampling_rate, min(len(lfp_trace), 4096))
+            frequencies, pxx, _, _ = _welch_csd_gpu(lfp_trace, lfp_trace, fs, min(len(lfp_trace), 4096))
         except Exception as e:
             log.warning(f"GPU welch failed: {e}. Falling back to CPU.")
             frequencies, pxx = signal.welch(
                 lfp_trace,
-                fs=sampling_rate,
+                fs=fs,
                 nperseg=min(len(lfp_trace), 4096)
             )
     else:
         frequencies, pxx = signal.welch(
             lfp_trace,
-            fs=sampling_rate,
+            fs=fs,
             nperseg=min(len(lfp_trace), 4096)
         )
 
@@ -564,18 +602,18 @@ def band_power(
     if normalize and baseline is not None and len(baseline) > 0:
         if device == 'cuda':
             try:
-                _, baseline_pxx, _, _ = _welch_csd_gpu(baseline, baseline, sampling_rate, min(len(baseline), 4096))
+                _, baseline_pxx, _, _ = _welch_csd_gpu(baseline, baseline, fs, min(len(baseline), 4096))
             except Exception as e:
                 log.warning(f"GPU baseline welch failed: {e}. Falling back to CPU.")
                 _, baseline_pxx = signal.welch(
                     baseline,
-                    fs=sampling_rate,
+                    fs=fs,
                     nperseg=min(len(baseline), 4096)
                 )
         else:
             _, baseline_pxx = signal.welch(
                 baseline,
-                fs=sampling_rate,
+                fs=fs,
                 nperseg=min(len(baseline), 4096)
             )
         baseline_power_val = np.mean(baseline_pxx[mask]) if np.any(mask) else 1.0
@@ -589,8 +627,9 @@ def band_power(
 def imaginary_coherency(
     x: np.ndarray,
     y: np.ndarray,
-    sampling_rate: float,
-    freq_range: Tuple[float, float],
+    fs: Optional[float] = None,
+    sampling_rate: Optional[float] = None,
+    freq_range: Tuple[float, float] = (1.0, 90.0),
     nperseg: Optional[int] = None,
     noverlap: Optional[int] = None,
     device: str = 'cpu',
@@ -611,7 +650,8 @@ def imaginary_coherency(
     Args:
         x, y: 1D time series of equal length, same sampling rate, already
             re-referenced (bipolar or Laplacian) to reduce shared-reference mixing.
-        sampling_rate: Hz.
+        fs: Sampling frequency in Hz (canonical).
+        sampling_rate: Supported alias for `fs` in Hz.
         freq_range: (min_freq, max_freq) in Hz to average coherency over.
         nperseg: Welch/CSD segment length; defaults to min(len(x), 1024).
         noverlap: defaults to nperseg // 2.
@@ -632,6 +672,7 @@ def imaginary_coherency(
     a common zero-lag-mixed source drives coh_mag_mean up while icoh_mean stays
     near zero; a genuinely lagged shared source drives both up.
     """
+    fs = _resolve_fs(fs, sampling_rate, "imaginary_coherency")
     x = np.asarray(x, dtype=float).ravel()
     y = np.asarray(y, dtype=float).ravel()
     n = min(len(x), len(y))
@@ -646,14 +687,14 @@ def imaginary_coherency(
 
     if device == 'cuda':
         try:
-            freqs, pxx, pyy, sxy = _welch_csd_gpu(x, y, sampling_rate, nperseg, noverlap)
+            freqs, pxx, pyy, sxy = _welch_csd_gpu(x, y, fs, nperseg, noverlap)
         except Exception as e:
             log.warning(f"GPU coherency failed: {e}. Falling back to CPU.")
             device = 'cpu'
     if device != 'cuda':
-        freqs, pxx = signal.welch(x, fs=sampling_rate, nperseg=nperseg, noverlap=noverlap)
-        _, pyy = signal.welch(y, fs=sampling_rate, nperseg=nperseg, noverlap=noverlap)
-        _, sxy = signal.csd(x, y, fs=sampling_rate, nperseg=nperseg, noverlap=noverlap)
+        freqs, pxx = signal.welch(x, fs=fs, nperseg=nperseg, noverlap=noverlap)
+        _, pyy = signal.welch(y, fs=fs, nperseg=nperseg, noverlap=noverlap)
+        _, sxy = signal.csd(x, y, fs=fs, nperseg=nperseg, noverlap=noverlap)
 
     mask = (freqs >= freq_range[0]) & (freqs <= freq_range[1])
     if not np.any(mask):
@@ -780,3 +821,193 @@ def _welch_csd_gpu(x: np.ndarray, y: np.ndarray, fs: float, nperseg: int, noverl
 
     freqs = cp.fft.rfftfreq(nperseg, d=1.0/fs)
     return freqs.get(), psd_x.get(), psd_y.get(), csd_xy.get()
+
+
+def compute_multitaper_psd(
+    data: np.ndarray,
+    fs: float,
+    nw: float = 3.0,
+    k_tapers: Optional[int] = None,
+    axis: int = -1,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Compute power spectral density via the Discrete Prolate Spheroidal Sequences (DPSS) multitaper method.
+
+    Multitaper spectral estimation (Thomson, 1982; Mitra & Pesaran, 1999) averages eigenspectra
+    modulated by orthogonal Slepian tapers, optimal for minimizing spectral leakage in finite-length
+    physiological epochs.
+
+    Contract & Normalization:
+        Each eigenspectrum is normalized by the discrete taper energy:
+            P_k(f) = |X_k(f)|^2 / (fs * sum_n v_k[n]^2)
+        For real signals, non-DC and non-Nyquist components are doubled (one-sided scaling),
+        preserving total physical variance under Parseval's theorem:
+            sum_f P(f) * df ≈ Var(x).
+
+    Args:
+        data: Continuous time series array of arbitrary shape.
+        fs: Sampling frequency in Hz. Must be strictly positive.
+        nw: Time-halfbandwidth product (default: 3.0). Must be strictly positive.
+        k_tapers: Number of DPSS tapers to average (default: max(1, int(2 * nw - 1))).
+            Must be in range [1, N] where N is length of `data` along `axis`.
+        axis: Time axis along which to compute the spectrum (default: -1).
+
+    Returns:
+        (freqs, psd) tuple:
+            freqs: 1D array of frequency bin centers in Hz (from 0 to fs / 2).
+            psd: Power spectral density array with `axis` corresponding to frequencies.
+
+    Raises:
+        ValueError: If `fs <= 0`, `nw <= 0`, `k_tapers` is out of bounds, or `data` contains NaNs.
+    """
+    if fs <= 0:
+        raise ValueError(f"Sampling frequency fs must be strictly positive; got {fs}.")
+    if nw <= 0:
+        raise ValueError(f"Time-halfbandwidth product nw must be strictly positive; got {nw}.")
+
+    arr = np.asarray(data, dtype=float)
+    if np.isnan(arr).any():
+        raise ValueError("Cannot compute multitaper PSD on data containing NaN values.")
+
+    n_samples = arr.shape[axis]
+    if n_samples < 4:
+        raise ValueError(f"Signal length along axis ({n_samples}) too short for multitaper spectral estimation.")
+
+    if k_tapers is None:
+        k_tapers = max(1, int(2 * nw - 1))
+    if not (1 <= k_tapers <= n_samples):
+        raise ValueError(f"k_tapers ({k_tapers}) must be between 1 and signal length ({n_samples}).")
+
+    from scipy.signal.windows import dpss
+
+    tapers = dpss(n_samples, NW=nw, Kmax=k_tapers, sym=False)  # shape: (K, N)
+
+    # Detrend data by subtracting mean along time axis
+    arr_mean = np.mean(arr, axis=axis, keepdims=True)
+    detrended = arr - arr_mean
+
+    # Bring evaluated axis to last position
+    detrended = np.moveaxis(detrended, axis, -1)
+    orig_shape = detrended.shape[:-1]
+    flat = detrended.reshape(-1, n_samples)  # shape: (M, N)
+
+    n_fft = n_samples
+    freqs = np.fft.rfftfreq(n_fft, d=1.0 / fs)
+    n_freqs = len(freqs)
+
+    psd_accum = np.zeros((flat.shape[0], n_freqs), dtype=float)
+    for k in range(k_tapers):
+        taper_k = tapers[k]
+        taper_energy = np.sum(taper_k ** 2)
+        # Apply taper
+        tapered = flat * taper_k  # (M, N)
+        fft_k = np.fft.rfft(tapered, n=n_fft, axis=-1)
+        psd_k = (np.abs(fft_k) ** 2) / (fs * taper_energy)
+        # One-sided scaling
+        if n_freqs > 2:
+            psd_k[:, 1:-1] *= 2.0
+        psd_accum += psd_k
+
+    psd_mean = psd_accum / k_tapers
+    psd_out = psd_mean.reshape(orig_shape + (n_freqs,))
+    # Move frequency axis back to original axis position
+    psd_out = np.moveaxis(psd_out, -1, axis)
+    return freqs, psd_out
+
+
+def voltage_curvature_1d(
+    lfp_matrix: np.ndarray,
+    pitch_um: float,
+    axis: int = 0,
+) -> np.ndarray:
+    """Compute the discrete second spatial derivative of extracellular potential along a laminar probe.
+
+    Estimates spatial voltage curvature (Nicholson & Freeman, 1975):
+        Curvature(z_i) = (V[i+1] - 2*V[i] + V[i-1]) / (pitch_um * 1e-6)^2
+
+    Important Scientific Distinction:
+        Voltage curvature is the purely electrical second derivative (in V/m^2 when potential is in Volts).
+        It does NOT assume a tissue conductivity tensor and is NOT physical Current Source Density (CSD).
+        To compute physical CSD in A/m^3, call ``current_source_density_1d(..., conductivity_s_per_m=...)``.
+
+    Args:
+        lfp_matrix: 2D array of continuous local field potentials in Volts (V),
+            with shape (n_channels, n_times) when axis=0. Minimum 3 channels required.
+        pitch_um: Inter-contact spacing (electrode pitch) in micrometers (um). Must be strictly positive.
+        axis: Spatial/channel axis along which to take the second derivative (default: 0).
+
+    Returns:
+        Curvature array in V/m^2 with 2 fewer channels along `axis` than `lfp_matrix`
+        (interior channels 1 to N-2).
+
+    Raises:
+        ValueError: If `pitch_um <= 0` or number of channels along `axis` is less than 3.
+    """
+    if pitch_um <= 0:
+        raise ValueError(f"Electrode pitch must be strictly positive; got {pitch_um} um.")
+    arr = np.asarray(lfp_matrix, dtype=float)
+    n_ch = arr.shape[axis]
+    if n_ch < 3:
+        raise ValueError(f"Voltage curvature requires at least 3 channels along spatial axis; got {n_ch}.")
+
+    pitch_m = pitch_um * 1e-6
+    delta_z2 = pitch_m ** 2
+
+    # Second spatial difference: (V[i+1] - 2*V[i] + V[i-1]) / delta_z2
+    sl_prev = [slice(None)] * arr.ndim
+    sl_curr = [slice(None)] * arr.ndim
+    sl_next = [slice(None)] * arr.ndim
+
+    sl_prev[axis] = slice(0, n_ch - 2)
+    sl_curr[axis] = slice(1, n_ch - 1)
+    sl_next[axis] = slice(2, n_ch)
+
+    d2v = (arr[tuple(sl_next)] - 2.0 * arr[tuple(sl_curr)] + arr[tuple(sl_prev)]) / delta_z2
+    return d2v
+
+
+def current_source_density_1d(
+    lfp_matrix: np.ndarray,
+    pitch_um: float,
+    conductivity_s_per_m: float,
+    axis: int = 0,
+) -> np.ndarray:
+    """Compute physical 1D Current Source Density (CSD) along a laminar electrode array.
+
+    Physical CSD models transmembrane current sources and sinks per unit volume via Poisson's equation
+    in an assumed isotropic, homogeneous extracellular medium:
+        CSD(z_i) = -sigma * d^2V / dz^2
+                 ≈ -conductivity_s_per_m * (V[i+1] - 2*V[i] + V[i-1]) / (pitch_um * 1e-6)^2
+
+    Sign Convention:
+        - Negative values indicate a CURRENT SINK (inward transmembrane current, e.g. excitatory synaptic input).
+        - Positive values indicate a CURRENT SOURCE (outward passive/return current).
+
+    Dimensional Invariant:
+        Potential V must be in Volts (V).
+        Pitch must be in micrometers (um, converted to m).
+        Conductivity must be explicitly supplied in Siemens per meter (S/m).
+        Output is returned in SI physical units: Amperes per cubic meter (A/m^3).
+        (Note: 1 A/m^3 = 10^-3 uA/mm^3 = 1 nA/mm^3).
+
+    Args:
+        lfp_matrix: 2D array of continuous local field potentials in Volts (V),
+            with shape (n_channels, n_times) when axis=0. Minimum 3 channels required.
+        pitch_um: Inter-contact spacing in micrometers (um). Must be strictly positive.
+        conductivity_s_per_m: Extracellular tissue conductivity in S/m (e.g. 0.3 to 0.4 S/m in mammalian cortex).
+            Required argument; never defaulted. Must be strictly positive.
+        axis: Spatial/channel axis along probe depth (default: 0).
+
+    Returns:
+        Array of physical Current Source Density in A/m^3, with 2 fewer channels along `axis`.
+
+    Raises:
+        ValueError: If `pitch_um <= 0`, `conductivity_s_per_m <= 0`, or channel count < 3.
+    """
+    if conductivity_s_per_m <= 0:
+        raise ValueError(
+            f"Tissue conductivity must be strictly positive; got {conductivity_s_per_m} S/m. "
+            "CSD is physically undefined without positive conductivity."
+        )
+    curvature = voltage_curvature_1d(lfp_matrix, pitch_um=pitch_um, axis=axis)
+    return -conductivity_s_per_m * curvature
+

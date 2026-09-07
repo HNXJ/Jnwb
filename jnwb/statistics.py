@@ -14,9 +14,9 @@ API Layers
     Use StatisticalAnalysis.fdr_correct() on a *collection* of confirmatory p-values
     when testing many hypotheses (units / channels / frequencies / time bins).
 
-**Legacy** (``compare_groups``, ``compare_multiple_groups``, ``correlate``):
-    Still functional; emit DeprecationWarnings on the ``fdr_pval_*`` output keys.
-    Migrate to exploratory_* or confirmatory_* as appropriate.
+**General Comparisons** (``compare_groups``, ``compare_multiple_groups``, ``correlate``):
+    Core comparison routines returning both parametric and non-parametric statistics
+    with explicit multiple_comparison status.
 
 Author: Claude Code
 Date: 2025-06-24
@@ -436,19 +436,8 @@ class StatisticalAnalysis:
 
     @staticmethod
     def _uncorrected_flags(param_p: float, nonparam_p: float) -> Dict:
-        """Single-comparison flags; not FDR.  Emits DeprecationWarning."""
-        warnings.warn(
-            "fdr_pval_parametric and fdr_pval_nonparametric are deprecated aliases that "
-            "mirror raw p-values (they are NOT FDR-adjusted). "
-            "Switch to exploratory_compare() for clean dual reporting, or "
-            "confirmatory_compare() + fdr_correct() for publication inference.",
-            DeprecationWarning,
-            stacklevel=3,
-        )
+        """Single-comparison unadjusted significance flags; not family-wise FDR."""
         return {
-            # Deprecated aliases: equal to raw p-values (NOT FDR-adjusted).
-            "fdr_pval_parametric": float(param_p),
-            "fdr_pval_nonparametric": float(nonparam_p),
             "significant_parametric": float(param_p) < StatisticalAnalysis.ALPHA,
             "significant_nonparametric": float(nonparam_p) < StatisticalAnalysis.ALPHA,
             "multiple_comparison": {
@@ -457,7 +446,6 @@ class StatisticalAnalysis:
                 "reason": "single_comparison_dual_report",
                 "note": (
                     "Parametric and nonparametric tests are dual exploratory reports. "
-                    "Do not treat the deprecated fdr_pval_* keys as FDR; they mirror raw p. "
                     "Use StatisticalAnalysis.fdr_correct(p_values) across a hypothesis family."
                 ),
             },
@@ -1033,4 +1021,233 @@ def cross_modal_comparison(
             'Best-lag linear correlation between trial-averaged LFP envelope and spike counts '
             f'(searched {lag_range_ms} ms in {bin_ms} ms steps)'
         ),
+    }
+
+
+def cluster_permutation_test(
+    X: np.ndarray,
+    Y: np.ndarray,
+    *,
+    paired: bool = False,
+    groups: Optional[Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]] = None,
+    scheme: Optional[str] = None,
+    threshold: float = 2.0,
+    n_permutations: int = 1000,
+    tail: str = "both",
+    rng: Optional[np.random.Generator] = None,
+) -> Dict[str, Union[np.ndarray, List[Dict[str, Union[float, np.ndarray]]]]]:
+    """Non-parametric cluster-based permutation test for multidimensional signals (Maris & Oostenveld, 2007).
+
+    Identifies spatiotemporal or spectrotemporal clusters exceeding a cluster-forming threshold,
+    evaluating their significance against a null distribution of the maximum cluster-level statistic
+    formed under paired (sign-flip), independent (label-shuffle), or grouped (within-group restricted)
+    exchangeability schemes.
+
+    Multiple comparisons across time, frequency, and channels are controlled via the maximum-cluster
+    statistic (family-wise error rate control).
+
+    Finite Monte Carlo p-values are computed with exact pseudo-count correction:
+        p = (1 + k) / (B + 1)
+    where k is the number of permutation draws at least as extreme as the observed cluster:
+        - For tail='greater': k = sum(max_null_stats >= observed_stat)
+        - For tail='less':    k = sum(max_null_stats <= observed_stat)
+        - For tail='both':    k = sum(max_null_stats >= abs(observed_stat))
+
+    Args:
+        X: Sample array for condition 1, shape (n_samples_X, ...).
+        Y: Sample array for condition 2, shape (n_samples_X, ...) if paired=True,
+            or (n_samples_Y, ...) if paired=False. Trailing dimensions must match X.
+        paired: If True, tests paired differences (X - Y) via random sign-flipping.
+            If False, tests independent samples (Welch unequal-variance t-test) via condition label shuffling.
+        groups: Group identifiers for exchangeability restriction (e.g. session_id or subject_id).
+            - When paired=True: Array of shape (n_samples_X,).
+            - When paired=False: Either a tuple (groups_X, groups_Y) matching X and Y samples,
+              or a single array of shape (n_samples_X + n_samples_Y,).
+            Required when scheme='within_group'.
+        scheme: Explicit exchangeability scheme for independent testing:
+            - 'global': Unrestricted condition label shuffle across all samples.
+            - 'within_group': Condition labels are shuffled strictly within each group/session,
+              preserving group composition and guarding against session-level confounding.
+            Defaults to 'within_group' if groups is provided, otherwise 'global'.
+        threshold: Cluster-forming threshold (positive float) applied to point-wise t-statistics (|t| > threshold).
+        n_permutations: Number of permutation draws (default: 1000). Must be >= 1.
+        tail: One of 'both' (positive and negative clusters), 'greater' (positive clusters only),
+            or 'less' (negative clusters only). Default is 'both'.
+        rng: An explicit numpy.random.Generator instance (e.g. np.random.default_rng(seed)).
+
+    Returns:
+        Dict with:
+        - 'stat_map': Observed point-wise t-statistic map, shape X.shape[1:].
+        - 'clusters': List of dicts, each describing an identified cluster:
+            - 'statistic': Float, sum of point-wise t-statistics in the cluster.
+            - 'p_value': Float, exact finite Monte Carlo p-value in (0, 1].
+            - 'mask': Boolean ndarray with shape X.shape[1:], indicating cluster members.
+        - 'max_null_stats': 1D ndarray of length `n_permutations`, containing the extremal cluster
+            statistic under each null permutation draw (maximum for 'greater', minimum for 'less',
+            or maximum absolute value for 'both').
+
+    Raises:
+        ValueError: If inputs have mismatched shapes, threshold <= 0, n_permutations < 1,
+            invalid tail specification, or invalid group configuration.
+        TypeError: If rng is provided but not an instance of numpy.random.Generator.
+    """
+    from scipy import ndimage
+
+    if threshold <= 0:
+        raise ValueError(f"Cluster threshold must be strictly positive; got {threshold}.")
+    if n_permutations < 1:
+        raise ValueError(f"n_permutations must be >= 1; got {n_permutations}.")
+    if tail not in ("both", "greater", "less"):
+        raise ValueError(f"tail must be 'both', 'greater', or 'less'; got {tail!r}.")
+    if rng is None:
+        rng = np.random.default_rng(0)
+    elif not isinstance(rng, np.random.Generator):
+        raise TypeError("rng must be an explicit numpy.random.Generator (e.g. np.random.default_rng(seed)).")
+
+    X_arr = np.asarray(X, dtype=float)
+    Y_arr = np.asarray(Y, dtype=float)
+
+    if np.isnan(X_arr).any() or np.isnan(Y_arr).any():
+        raise ValueError("Cannot perform cluster permutation test on data containing NaN values.")
+
+    if scheme is None:
+        scheme = "within_group" if groups is not None else "global"
+    elif scheme not in ("global", "within_group"):
+        raise ValueError(f"scheme must be 'global' or 'within_group'; got {scheme!r}.")
+
+    if paired:
+        if X_arr.shape != Y_arr.shape:
+            raise ValueError(f"Paired cluster permutation requires identical shapes; got {X_arr.shape} vs {Y_arr.shape}.")
+        n_obs = X_arr.shape[0]
+        if n_obs < 2:
+            raise ValueError(f"Paired cluster permutation requires at least 2 samples; got {n_obs}.")
+        diff = X_arr - Y_arr
+        if groups is not None:
+            groups_arr = np.asarray(groups)
+            if groups_arr.shape[0] != n_obs:
+                raise ValueError(f"Paired groups length {groups_arr.shape[0]} != sample count {n_obs}.")
+    else:
+        if X_arr.shape[1:] != Y_arr.shape[1:]:
+            raise ValueError(
+                f"Independent cluster permutation requires matching trailing dimensions; "
+                f"got {X_arr.shape[1:]} vs {Y_arr.shape[1:]}."
+            )
+        n1 = X_arr.shape[0]
+        n2 = Y_arr.shape[0]
+        if n1 < 2 or n2 < 2:
+            raise ValueError(f"Independent cluster permutation requires at least 2 samples per group; got {n1}, {n2}.")
+        pooled = np.concatenate([X_arr, Y_arr], axis=0)
+        n_total = n1 + n2
+        orig_labels = np.array([0] * n1 + [1] * n2)
+
+        if groups is not None:
+            if isinstance(groups, tuple):
+                if len(groups) != 2:
+                    raise ValueError("Tuple groups must have length 2 (groups_X, groups_Y).")
+                gX, gY = np.asarray(groups[0]), np.asarray(groups[1])
+                if gX.shape[0] != n1 or gY.shape[0] != n2:
+                    raise ValueError(f"Tuple groups lengths ({gX.shape[0]}, {gY.shape[0]}) do not match ({n1}, {n2}).")
+                pooled_groups = np.concatenate([gX, gY], axis=0)
+            else:
+                pooled_groups = np.asarray(groups)
+                if pooled_groups.shape[0] != n_total:
+                    raise ValueError(f"groups length {pooled_groups.shape[0]} != total samples {n_total}.")
+        else:
+            if scheme == "within_group":
+                raise ValueError("scheme='within_group' requires groups to be specified.")
+            pooled_groups = None
+
+    def _calc_t_paired(d: np.ndarray) -> np.ndarray:
+        n = d.shape[0]
+        m = np.mean(d, axis=0)
+        v = np.var(d, axis=0, ddof=1)
+        se = np.sqrt(v / n)
+        return np.divide(m, se, out=np.zeros_like(m), where=se > 0)
+
+    def _calc_t_unpaired(x1: np.ndarray, x2: np.ndarray) -> np.ndarray:
+        n_a, n_b = x1.shape[0], x2.shape[0]
+        m1, m2 = np.mean(x1, axis=0), np.mean(x2, axis=0)
+        v1, v2 = np.var(x1, axis=0, ddof=1), np.var(x2, axis=0, ddof=1)
+        se = np.sqrt(v1 / n_a + v2 / n_b)
+        return np.divide(m1 - m2, se, out=np.zeros_like(m1), where=se > 0)
+
+    def _extract_clusters(t_map: np.ndarray) -> List[Tuple[float, np.ndarray]]:
+        found = []
+        if tail in ("both", "greater"):
+            pos_labeled, n_pos = ndimage.label(t_map > threshold)
+            for i in range(1, n_pos + 1):
+                c_mask = (pos_labeled == i)
+                found.append((float(np.sum(t_map[c_mask])), c_mask))
+        if tail in ("both", "less"):
+            neg_labeled, n_neg = ndimage.label(t_map < -threshold)
+            for i in range(1, n_neg + 1):
+                c_mask = (neg_labeled == i)
+                found.append((float(np.sum(t_map[c_mask])), c_mask))
+        return found
+
+    # 1. Observed statistic map and clusters
+    obs_t = _calc_t_paired(diff) if paired else _calc_t_unpaired(X_arr, Y_arr)
+    obs_clusters = _extract_clusters(obs_t)
+
+    # 2. Permutation null distribution of extremal cluster statistic
+    max_null_stats = np.empty(n_permutations, dtype=float)
+    flip_shape = (n_obs, *([1] * (diff.ndim - 1))) if paired else ()
+
+    for b in range(n_permutations):
+        if paired:
+            flips = rng.choice([-1.0, 1.0], size=flip_shape)
+            perm_diff = diff * flips
+            p_t = _calc_t_paired(perm_diff)
+        else:
+            # Delegate permutation strictly to canonical permute_labels
+            p_labels = permute_labels(
+                orig_labels,
+                groups=pooled_groups,
+                scheme=scheme,
+                rng=rng,
+            )
+            idx0 = np.flatnonzero(p_labels == 0)
+            idx1 = np.flatnonzero(p_labels == 1)
+            p_t = _calc_t_unpaired(pooled[idx0], pooled[idx1])
+
+        p_clusters = _extract_clusters(p_t)
+        if len(p_clusters) > 0:
+            if tail == "greater":
+                max_null_stats[b] = max(c[0] for c in p_clusters)
+            elif tail == "less":
+                max_null_stats[b] = min(c[0] for c in p_clusters)
+            else:  # both
+                max_null_stats[b] = max(abs(c[0]) for c in p_clusters)
+        else:
+            max_null_stats[b] = 0.0
+
+    # 3. Exact finite Monte Carlo p-values with (1 + k) / (B + 1)
+    cluster_results: List[Dict[str, Union[float, np.ndarray]]] = []
+    for stat, mask in obs_clusters:
+        if tail == "greater":
+            k = int(np.sum(max_null_stats >= stat))
+        elif tail == "less":
+            k = int(np.sum(max_null_stats <= stat))
+        else:  # both
+            k = int(np.sum(max_null_stats >= abs(stat)))
+        p_val = (1.0 + k) / (n_permutations + 1.0)
+        cluster_results.append({
+            'statistic': stat,
+            'p_value': float(p_val),
+            'mask': mask,
+        })
+        p_val = (1.0 + k) / (n_permutations + 1.0)
+        cluster_results.append({
+            'statistic': stat,
+            'p_value': float(p_val),
+            'mask': mask,
+        })
+
+    # Sort clusters by statistical prominence (largest absolute sum first)
+    cluster_results.sort(key=lambda c: abs(c['statistic']), reverse=True)
+
+    return {
+        'stat_map': obs_t,
+        'clusters': cluster_results,
+        'max_null_stats': max_null_stats,
     }
