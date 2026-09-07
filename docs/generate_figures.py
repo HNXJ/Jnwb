@@ -258,11 +258,11 @@ def fig05_complex_tfr():
     # Cone of influence boundary
     coi_mask = tfr.coi_mask
     ax2.contour(t * 1000, freqs, coi_mask, levels=[0.5], colors=[C_VIOLET], linewidths=1.2, linestyles="--")
-    ax2.plot([], [], color=C_VIOLET, ls="--", label="COI Boundary (tfr.coi_mask)")
+    ax2.plot([], [], color="white", ls="--", lw=1.5, label="COI Boundary (tfr.coi_mask)")
     ax2.set_xlabel("Time (ms)")
     ax2.set_ylabel("Frequency (Hz)")
     ax2.set_title("B. Complex Morlet TFR & Cone of Influence (jnwb.complex_tfr)", pad=8)
-    ax2.legend(frameon=False, loc="upper left")
+    leg = ax2.legend(frameon=True, facecolor="#2d2d2d", edgecolor="none", loc="upper left", labelcolor="white", fontsize=7.5)
 
     fig.tight_layout()
     fig.savefig(OUT_DIR / "fig05_complex_tfr_coi.png")
