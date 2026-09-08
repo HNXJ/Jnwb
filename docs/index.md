@@ -1,10 +1,12 @@
 # jnwb
 
+**Version {{ jnwb_version }}**
+
 Dataset-agnostic Python library for Neurodata Without Borders (NWB 2.0+) electrophysiology: addressing, spikes, LFP, spectral analysis, statistics, population methods, decoding, connectivity, laminar CSD, filtering, QC, and visualization.
 
 Condition codes, task structure, and experimental hypotheses belong in project code. The library operates on NWB files, numeric arrays, and metadata tables.
 
-[Architecture](01_architecture_and_philosophy.md) · [Public API](api.md) (111 symbols) · [Common mistakes](common_mistakes.md)
+[Architecture](01_architecture_and_philosophy.md) · [Public API](api.md) (every exported symbol) · [Common mistakes](common_mistakes.md)
 
 ## Install
 
@@ -39,7 +41,7 @@ print(f"Beta band power: {beta_power:.4f}")
 - [Installation](install.md) — setup and verification
 - [Architecture](01_architecture_and_philosophy.md) — scope, units, and dataset independence
 - [Addressing & metadata](02_paths_addressing_metadata.md)
-- [Public API](api.md) — 111 exported symbols
+- [Public API](api.md) — every symbol in `jnwb.__all__`, gate-enforced
 - [Interactive analyses](12_interactive_analyses.md) — hosted analysis atlas (separate from this package docs)
 - [Recipes](memory.md) — longer worked examples
 

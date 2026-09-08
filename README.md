@@ -78,7 +78,7 @@ print(len(units), "units;", jnwb.audit_units(units))
 
 ## Documentation
 
-Guides, the public API (`jnwb.__all__`, 111 symbols), and common mistakes are on [Read the Docs](https://jnwb.readthedocs.io/).
+Guides, the public API (every symbol in `jnwb.__all__`), and common mistakes are on [Read the Docs](https://jnwb.readthedocs.io/).
 
 ## License
 

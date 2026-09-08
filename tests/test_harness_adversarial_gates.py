@@ -16,6 +16,8 @@ sys.path.insert(0, str(REPO_ROOT))
 import pytest
 
 from scripts.harness_gate import (
+    check_documented_api_matches_all,
+    check_docs_version_matches_package,
     check_frozen_boundary,
     check_logarithm_last_rule,
     check_modality_isolation,
@@ -227,3 +229,92 @@ def summarize_log_normal_effects(unit_db_modulations):
         """Integrity Probe: Live repository state must pass all preflight gates."""
         from scripts.harness_gate import run_full_preflight
         assert run_full_preflight() is True
+
+
+class TestDocumentationDriftGates:
+    """Gates 9 and 10 exist because prose cannot hold a fact true.
+
+    docs/memory.md once claimed "exactly 105 public symbols" while the package exported 111 --
+    stale within a single release cycle, in the document agents are told to read, with nothing
+    failing. These probes assert the gates catch that class of drift rather than merely passing
+    on a currently-clean tree.
+    """
+
+    @staticmethod
+    def _scratch_repo(tmp_path: Path) -> Path:
+        import shutil
+        (tmp_path / "docs").mkdir(parents=True, exist_ok=True)
+        for rel in ("docs/api.md", "docs/conf.py", "mkdocs.yml", "README.md"):
+            shutil.copy(REPO_ROOT / rel, tmp_path / rel)
+        return tmp_path
+
+    def test_clean_tree_passes_both_gates(self, tmp_path):
+        repo = self._scratch_repo(tmp_path)
+        assert check_documented_api_matches_all(repo) == []
+        assert check_docs_version_matches_package(repo) == []
+
+    def test_phantom_api_row_is_caught(self, tmp_path):
+        """A reference row left behind for a symbol that no longer exists."""
+        repo = self._scratch_repo(tmp_path)
+        api = repo / "docs/api.md"
+        api.write_text(api.read_text(encoding="utf-8")
+                       + "\n| jnwb.removed_helper | function | removed_helper()<br>*gone* |\n",
+                       encoding="utf-8")
+        violations = check_documented_api_matches_all(repo)
+        assert any("PHANTOM_API_ROW" in v and "removed_helper" in v for v in violations)
+
+    def test_undocumented_export_is_caught(self, tmp_path):
+        """An export with no reference row."""
+        repo = self._scratch_repo(tmp_path)
+        api = repo / "docs/api.md"
+        api.write_text(api.read_text(encoding="utf-8").replace(
+            "| jnwb.aggregate_to_db |", "| jnwb.NOTHERE_x |", 1), encoding="utf-8")
+        violations = check_documented_api_matches_all(repo)
+        assert any("UNDOCUMENTED_EXPORT" in v and "aggregate_to_db" in v for v in violations)
+
+    def test_stale_duplicated_version_in_mkdocs_is_caught(self, tmp_path):
+        import jnwb
+        repo = self._scratch_repo(tmp_path)
+        mk = repo / "mkdocs.yml"
+        mk.write_text(mk.read_text(encoding="utf-8").rstrip()
+                      + '\nextra:\n  jnwb_version: "0.0.9"\n', encoding="utf-8")
+        violations = check_docs_version_matches_package(repo)
+        assert any("DOCS_VERSION_MISMATCH" in v and "mkdocs.yml" in v for v in violations)
+        assert jnwb.__version__ != "0.0.9"
+
+    def test_stale_install_pin_in_prose_is_caught(self, tmp_path):
+        repo = self._scratch_repo(tmp_path)
+        rd = repo / "README.md"
+        rd.write_text(rd.read_text(encoding="utf-8")
+                      + "\npip install jnwb==0.0.9\n", encoding="utf-8")
+        violations = check_docs_version_matches_package(repo)
+        assert any("DOCS_VERSION_MISMATCH" in v and "README.md" in v for v in violations)
+
+    def test_hardcoded_conf_version_is_caught_even_beside_a_derived_one(self, tmp_path):
+        """The hole this test was written for: one derived assignment must not excuse another.
+
+        An earlier draft of gate 10 only asked whether *some* version/release assignment derived
+        from jnwb.__version__, so a hardcoded ``version = '0.0.9'`` passed unnoticed behind a
+        correct ``release = jnwb.__version__``.
+        """
+        repo = self._scratch_repo(tmp_path)
+        cf = repo / "docs/conf.py"
+        text = cf.read_text(encoding="utf-8").replace(
+            "version = jnwb.__version__", "version = '0.0.9'", 1)
+        assert "release = jnwb.__version__" in text, "the derived sibling must still be present"
+        cf.write_text(text, encoding="utf-8")
+        violations = check_docs_version_matches_package(repo)
+        assert any("DOCS_VERSION_NOT_DERIVED" in v for v in violations)
+
+    def test_no_hardcoded_symbol_counts_remain_in_prose(self):
+        """The original defect: a symbol count written into documentation."""
+        import re
+        pattern = re.compile(r"\d{2,4}\s+(?:public\s+|exported\s+)?symbols", re.IGNORECASE)
+        offenders = []
+        for path in [REPO_ROOT / "README.md", *sorted((REPO_ROOT / "docs").glob("*.md"))]:
+            for line_no, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+                if pattern.search(line):
+                    offenders.append(f"{path.name}:{line_no}: {line.strip()}")
+        assert offenders == [], (
+            "hardcoded symbol counts found; state the invariant and let gate 9 check it "
+            "instead: " + "; ".join(offenders))

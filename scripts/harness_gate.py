@@ -201,6 +201,97 @@ def check_public_symbols_documented(repo_root: Optional[Path] = None) -> List[st
     return violations
 
 
+def check_documented_api_matches_all(repo_root: Optional[Path] = None) -> List[str]:
+    """Gate 9 (API Set Equality): assert documented API == set(jnwb.__all__), both directions.
+
+    Gate 6 checks that every export is *mentioned* somewhere in docs/. That is necessary but
+    weak: it cannot see a reference row left behind for a symbol that no longer exists, and it
+    is satisfied by an incidental mention anywhere in any file. This gate pins the reference
+    surface itself as a set.
+
+    It exists because prose cannot hold a count true. ``docs/memory.md`` carried "exactly 105
+    public symbols" while the package exported 111 -- stale within one release cycle, in the
+    document agents are pointed at, and nothing failed. The repair is to state the invariant and
+    check it here rather than to write a fresher number that will go stale in turn.
+    """
+    root = repo_root or REPO_ROOT
+    import jnwb
+
+    api_path = root / "docs" / "api.md"
+    if not api_path.exists():
+        return ["MISSING_API_DOC: docs/api.md not found"]
+
+    # Reference rows look like: | jnwb.NAME | function | ... |
+    documented = set(re.findall(r"^\|\s*jnwb\.([A-Za-z_][A-Za-z0-9_]*)\s*\|",
+                                api_path.read_text(encoding="utf-8"), flags=re.MULTILINE))
+    exported = set(jnwb.__all__)
+
+    violations = []
+    for symbol in sorted(exported - documented):
+        violations.append(
+            f"UNDOCUMENTED_EXPORT: 'jnwb.{symbol}' is in __all__ but has no docs/api.md row")
+    for symbol in sorted(documented - exported):
+        violations.append(
+            f"PHANTOM_API_ROW: docs/api.md documents 'jnwb.{symbol}', which is not in __all__")
+    return violations
+
+
+def check_docs_version_matches_package(repo_root: Optional[Path] = None) -> List[str]:
+    """Gate 10 (Version Provenance): assert every version the docs state equals the package's.
+
+    A rendered version is provenance: it tells a reader which release they are looking at. A
+    *duplicated* version is a liability -- it is correct only until the next release, and
+    nothing notices when it stops being. So the rule is not "the docs must state a version"
+    but "any version the docs state must be derived from, or equal to, jnwb.__version__".
+
+    Checked locations, each a place a literal can drift:
+      * mkdocs.yml ``extra.jnwb_version`` (consumed by the version hook)
+      * ``jnwb==X.Y.Z`` install pins in README.md and docs/*.md
+      * docs/conf.py, which must derive from jnwb.__version__ rather than hardcode
+    """
+    root = repo_root or REPO_ROOT
+    import jnwb
+
+    expected = jnwb.__version__
+    violations = []
+
+    mkdocs_yml = root / "mkdocs.yml"
+    if mkdocs_yml.exists():
+        text = mkdocs_yml.read_text(encoding="utf-8")
+        for found in re.findall(r"^\s*jnwb_version:\s*[\"']?([0-9][^\"'\s]*)", text,
+                                flags=re.MULTILINE):
+            if found != expected:
+                violations.append(
+                    f"DOCS_VERSION_MISMATCH: mkdocs.yml extra.jnwb_version is {found!r}, "
+                    f"but jnwb.__version__ is {expected!r}")
+
+    for md in [root / "README.md", *sorted((root / "docs").glob("*.md"))]:
+        if not md.exists():
+            continue
+        for found in re.findall(r"jnwb==([0-9][0-9A-Za-z.\-]*)", md.read_text(encoding="utf-8")):
+            if found != expected:
+                violations.append(
+                    f"DOCS_VERSION_MISMATCH: {md.relative_to(root).as_posix()} pins "
+                    f"jnwb=={found}, but jnwb.__version__ is {expected}")
+
+    conf = root / "docs" / "conf.py"
+    if conf.exists():
+        conf_text = conf.read_text(encoding="utf-8")
+        assignments = re.findall(r"^\s*(version|release)\s*=\s*(.+?)\s*$", conf_text,
+                                 flags=re.MULTILINE)
+        if not assignments:
+            violations.append(
+                "DOCS_VERSION_NOT_DERIVED: docs/conf.py sets neither version nor release")
+        # EVERY such assignment must derive. Checking only that *some* assignment derives lets a
+        # hardcoded `version = '0.0.9'` hide behind a correct `release = jnwb.__version__`.
+        for name, rhs in assignments:
+            if "jnwb.__version__" not in rhs:
+                violations.append(
+                    f"DOCS_VERSION_NOT_DERIVED: docs/conf.py sets {name} = {rhs}; it must "
+                    "derive from jnwb.__version__ rather than hardcode a literal")
+    return violations
+
+
 def check_dataset_leakage(repo_root: Optional[Path] = None) -> List[str]:
     """Gate 6 (Dataset Independence): Assert zero experiment-specific condition tokens, p-values, or study conclusions in generic code and harness."""
     root = repo_root or REPO_ROOT
@@ -475,6 +566,24 @@ def run_full_preflight() -> bool:
             print(f"  - {v}")
         return False
     print("PASS: Python 3.12 sole supported target verified across metadata and CI.")
+
+    # 9. Documented API set equality: docs/api.md == set(jnwb.__all__)
+    api_set_violations = check_documented_api_matches_all()
+    if api_set_violations:
+        print("FAIL: Documented API does not match jnwb.__all__:")
+        for v in api_set_violations:
+            print(f"  - {v}")
+        return False
+    print("PASS: docs/api.md documents exactly the set exported in jnwb.__all__.")
+
+    # 10. Documentation version provenance: every stated version equals the package's
+    docs_version_violations = check_docs_version_matches_package()
+    if docs_version_violations:
+        print("FAIL: Documentation version does not match the package version:")
+        for v in docs_version_violations:
+            print(f"  - {v}")
+        return False
+    print("PASS: Documentation versions derive from jnwb.__version__.")
 
     print("ALL HARNESS GATES PASSED.")
     return True

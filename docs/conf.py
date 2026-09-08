@@ -30,8 +30,17 @@ myst_enable_extensions = [
     "dollarmath",
     "colon_fence",
     "fieldlist",
+    # Resolves the {{ jnwb_version }} placeholder that pages share with the MkDocs build.
+    # Both engines render the same docs/ tree, so a placeholder handled by only one of them
+    # leaks verbatim into the other's HTML.
+    "substitution",
 ]
 myst_heading_anchors = 3
+
+# Single source of truth, same as version/release above: never a duplicated literal.
+# scripts/mkdocs_version_hook.py performs the equivalent substitution for the MkDocs build,
+# and scripts/harness_gate.py gate 10 verifies every version the docs state matches the package.
+myst_substitutions = {"jnwb_version": jnwb.__version__}
 
 source_suffix = {
     ".rst": "restructuredtext",

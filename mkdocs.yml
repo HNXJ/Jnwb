@@ -78,5 +78,8 @@ nav:
   - API Reference:
       - Full Surface Contract: api.md
 
-extra:
-  jnwb_version: "0.1.1"
+# extra.jnwb_version is injected at build time by the hook below, from jnwb.__version__.
+# It is deliberately not written here: a duplicated version is correct only until the next
+# release, and nothing notices when it stops being.
+hooks:
+  - scripts/mkdocs_version_hook.py

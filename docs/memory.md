@@ -11,7 +11,7 @@ Persistent memory and operational handbook for AI agents working with or extendi
    - Do not describe directional metrics with physical or interventionist causal verbs.
 4. **Logarithm-Last Rule**: When raw power conservation across trials is the estimand, average raw power across trials first, then take the decibel logarithm at the final reporting step.
 5. **RNG Reproducibility**: Never mutate global seeds. Always pass an explicit numpy.random.Generator (e.g. rng = np.random.default_rng(seed)).
-6. **Public API Contract**: Exactly 105 public symbols are exported in jnwb.__all__. Never break or alter existing public signatures without an approved transition plan.
+6. **Public API Contract**: `docs/api.md` documents exactly the set exported in `jnwb.__all__` -- no undocumented exports, no rows for symbols that no longer exist. This is verified mechanically by `scripts/harness_gate.py`, not asserted in prose: a count written here would go stale silently the next time a symbol is added. Never break or alter existing public signatures without an approved transition plan.
 
 ## NWB Metadata and Addressing Recipe
 
