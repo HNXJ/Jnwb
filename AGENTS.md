@@ -1,112 +1,110 @@
-# AGENTS.md — Repository Operational Kernel (jnwb & omission)
+# AGENTS.md — working rules for `jnwb`
 
-Generic NWB analysis library (`jnwb/`) and sequential omission electrophysiology corpus (`omission/`).
-This file is the authoritative repository operational contract for all AI agents and automated harnesses.
+The single operational contract for this repository. `CLAUDE.md` carries phase and policy;
+this file carries how to work. A project that *uses* jnwb keeps its own rules in its own
+repository.
 
----
+## 1. Evidence
 
-## 1. Epistemic Discipline & Authority Hierarchy
+Every claim is one of `observed | derived | inferred | assumed | unknown`. Say which.
 
-### Truth Precedence
-When sources or claims conflict, authority resolves strictly in this descending order:
-1. **Direct Empirical Receipts**: The exact data artifact (CSV, JSON, HDF5, NWB) written by verified code on disk, named beside the claim.
-2. **Current Repository & File State**: Inspected live state of the working directory and version control.
-3. **Structured Project State**: `omission/context/PROJECT_STATE.md` and `artifacts/.lab/*.json`.
-4. **Narrative Memory & Prose**: Conversation transcripts, doctrine descriptions, and skill documentation.
+- `execution != verification`. Exit status 0 means the process ran.
+- `configured != loaded != executed != verified`.
+- `memory != current state`. Re-read the file; do not quote a path, count, or flag from
+  recall.
 
-### Core Epistemic Invariants
-- **Claim Taxonomy**: Every claim belongs strictly to `claim ∈ {observed, derived, inferred, assumed, unknown}`.
-- **Verification Rule**: `execution ≠ verification`. A command exiting with code 0 or writing an output is not verification. Verification requires observed empirical receipts matching the exact claim scope.
-- **State Rule**: `memory ≠ current state ≠ evidence`. Never assert state based on memory of a previous turn. Re-derive from live disk inspection.
-- **Pass Criterion**: `unknown ≠ PASS`. An unresolved conflict or unverified assumption is a STOP condition.
-- **Harness Threshold**: Any evaluated harness score `< 80/100` triggers mandatory harness diagnosis and repair before proceeding.
+**No claim without a receipt.** "Done", "passes", "fixed" require the command and its
+output in the same message. Otherwise say "ran X, got Y".
 
----
+**Running without error does not verify content.** Before reporting a number, read the
+code that produced it and confirm it traces to a computation on real data rather than a
+literal, an RNG draw, or a fallback branch.
 
-## 2. Execution Grammar: W = P(RG)^N S
+When sources conflict, authority runs: the receipt on disk, then live repository state,
+then machine-readable state files, then prose. Unresolved conflict on a material point
+stops the work and surfaces both sides.
 
-All multi-step agent actions follow the PRGS operational loop:
-- **P (Prepare)**: Orient, inspect baseline repository state, identify physical constraints, locate input receipts, and establish explicit acceptance criteria before mutating any state.
-- **R (Review)**: Evaluate candidate action, script output, or intermediate observation against evidence, physical invariants, and protected boundaries.
-- **G (Progress)**: Execute the smallest discriminative action producing decisive empirical feedback.
-- **S (Seal)**: Verify all acceptance criteria against direct empirical receipts, run regression tests, record Labyrinth nodes where claims change standing, and produce compact evidence-backed handoffs before declaring completion.
+## 2. Loop
 
----
+`W = P (R G)^N S`
 
-## 3. Scientific & Neuroscience Invariants
+- **Prepare** — reconstruct goal, evidence, constraints, tools; define acceptance.
+- **Review** — observe before changing; find the highest-value justified change.
+- **Progress** — apply the smallest authorised change; preserve invariants; test.
+- **Seal** — verify acceptance, reconcile artifacts, leave a recoverable handoff.
 
-### Domain Invariants
-1. **Signal Class Independence**:
-   - Spikes (SUA/SPK), Multi-unit envelope (MUAe), Local Field Potentials (LFP), and behavioral covariates (pupil, eye gaze, lick) represent distinct physical observables.
-   - **Never pool across modalities.** Preserve session, subject, area, layer, probe, and unit namespaces throughout.
-2. **Estimand Disambiguation**:
-   - `Prevalence ≠ Magnitude ≠ Information ≠ Mechanism`.
-   - Answering "how many units respond" (prevalence) does not answer "how strong is the response" (magnitude), "can stimulus/omission be decoded" (information), or "what circuit drives the effect" (mechanism).
-   - Name the exact estimand before drawing conclusions or comparing results.
-3. **Causal & Directional Claims**:
-   - `Association ≠ Directionality ≠ Causality`.
-   - Correlation, Granger causality / phase slope index / transfer entropy, and perturbation/causal mechanisms require progressively stronger designs. Do not describe a weaker statistical metric with a stronger causal verb.
-4. **Logarithmic Estimand Clarity**:
-   - Explicitly declare whether the estimand is arithmetic mean of raw power ($\mathbb{E}[P]$, physical power conservation) or logarithmic power ($\mathbb{E}[\log P]$, geometric mean / log-normal central tendency).
-   - When the declared estimand is physical raw-power conservation across trials, average raw power before converting to decibels. Where the declared estimand is log-normal power distribution across units or sites, averaging log-transformed power/dB is legitimate and must be explicitly specified as such. Never confuse the two estimands.
-5. **Unit of Inference**:
-   - Explicitly declare the inferential unit (unit, channel, trial, or session/animal) for all degrees of freedom and statistical tests. Cluster/hierarchical structure must be accounted for (e.g. session-cluster bootstrap, GLMM).
-6. **Valid Nulls**:
-   - A valid null is an empirical finding, not a failure. Never alter an estimator, window, or threshold simply because `p ≥ α`.
-7. **No Synthetic Science**:
-   - No empirical value may exist in any output that no verified script computed from real data.
-   - If placeholder/synthetic data is required for scaffolding, the output and figure must display an unmissable red `PLACEHOLDER-DUMMY` banner.
+Review yields: acceptance met → Seal · justified action → Progress · missing evidence
+or authority → stop and ask.
 
-### Scientific Writing, Vocabulary & Methodological Distinctions
-1. **Scientific Voice over Process Jargon**:
-   - Prefer direct, compact, quantitative, skeptical scientific vocabulary: `result`, `test`, `analysis`, `table`, `figure`, `source`, `method`, `limit`, `condition`.
-   - Avoid governance/process jargon in scientific prose: avoid `framework`, `doctrine`, `contract`, `ontology`, `evidence architecture`, `claim machinery`, `pipeline governance`.
-   - Avoid promotional, marketing, or exaggerated language ("striking", "compelling majority", "revolutionary").
-2. **Critical Scientific & Methodological Distinctions**:
-   - **Response Magnitude vs. Temporal Precision**: Large signal modulation or power changes do not imply high temporal precision or well-localized onset latency.
-   - **Detected vs. Temporally Resolved**: Detecting that an effect or modulation is present does not by itself establish that its event timing is resolved with an admissible latency.
-   - **Precision, Latency, Estimator Disagreement & Boundary Censoring**:
-     - `temporal precision / resolution`: Uncertainty limit supported by the recording signal, sampling, and transform window.
-     - `temporally resolved`: Methodological classification indicating an event response met latency-fit quality and admissibility criteria.
-     - `latency`: Estimated event-relative timing.
-     - `estimator spread`: Disagreement among alternative onset or latency estimators.
-     - `boundary censoring`: Estimates pinned to search boundaries represent censored bounds, not unconstrained point latencies.
-   - **Inferential Unit Hierarchy**: Descriptive percentages or summary statistics computed across lower-level observations (e.g. units or trials) must not substitute for or contradict hypothesis tests evaluated at the declared higher-level inferential unit (e.g. sessions or subjects).
-   - **Association vs. Causality**: Observational correlation, descriptive timing, spectral coherence, or directed phase/information metrics do not establish physical causality or perturbation mechanisms.
+## 3. Invariants this library protects
 
----
+1. **No empirical value in any output that no script computed from data.** Hardcoded
+   values are for visual constants or output marked synthetic.
+2. **Take the logarithm last.** Average raw power, divide by baseline, `10*log10` once.
+   Averaging decibels biases each site by its own noisiness. Use `aggregate_to_db`.
+3. **`jnwb/` imports nothing from a project folder.** The dependency runs one way. jnwb
+   must behave identically whether a project package is installed or absent. Enforced by
+   `tests/test_jnwb_frozen_boundary.py`.
+4. **Units, coordinate frames, sample rates, and 0- vs 1-indexing do not change silently**
+   across a jnwb function boundary. State intentional breaks at the change site.
+5. **Nulls are explicit.** Label permutation requires a named exchangeability scheme.
+   Anything consuming randomness takes an `rng` and reports what it used.
+6. **Device and worker count never change a number.** `n_jobs` is a speed knob; a result
+   computed on GPU records that it was.
 
-## 4. Repository Protection & Boundary Invariants
+## 4. Vocabulary
 
-1. **The `jnwb/` Freeze**:
-   - `jnwb/` is a generic, dataset-agnostic NWB library. It is strictly frozen and read-only during analysis phases.
-   - Analysis code in `omission/` consumes `jnwb/`. `jnwb/` never imports from project directories (enforced by `tests/test_jnwb_frozen_boundary.py`).
-2. **Protected Concurrent Paths**:
-   - The following paths are protected concurrent human/session work:
-     - `omission/context/figures/`
-     - `omission/scripts/`
-     - `omission-data/SKILL.md`
-   - Do not revert, stash, overwrite, or delete uncommitted work in these paths.
-3. **Mechanical Safety Gates**:
-   - No destructive git operations: `git reset --hard`, `git push --force`, and wildcard additions `git add .` or `git add -A` are prohibited. Stage only exact, intended file paths. `git commit -a` is prohibited for the same reason: it stages every modified tracked file without using a wildcard, so the rule above does not catch it.
-   - **Verify the index before every commit.** This is a shared working tree: another session's uncommitted edits to a file you also touched are indistinguishable from your own. Run `git diff --cached --name-only` and confirm that *every* listed path belongs to your declared task. If one does not, unstage it (`git restore --staged <path>`) and say so — do not commit it "because it was already dirty".
-     - Receipt (2026-09-02): commit `29ed345` swept an in-progress `README.md` edit from a concurrent session into an unrelated docs commit. The committed README then referenced `examples/quickstart_jnwb.py` and a PNG that were never tracked, so on a fresh clone the image did not render and the documented command failed. Repaired by `8ca5567`. The `git add .` ban was already in force and did not prevent it, because the staging was path-explicit — what was missing was the check on *what ended up staged*.
-     - This one cannot be fully mechanized: "belongs to my declared task" is not machine-readable, and `scripts/harness_gate.py::check_protected_paths` only guards the declared protected paths (`README.md` is not one) and runs in CI, after the push. Treat the check as a required manual step.
-   - Mechanically preventable errors must be guarded by executable gates or tests, not just docstrings.
+- Association, directionality, and causality are three claims. Granger and phase slope
+  index measure temporal-lag asymmetry, not anatomy.
+- Prevalence ("how many units respond") is a different question from magnitude,
+  decodability, and mechanism. Answering one does not answer another.
+- Spikes and LFP are distinct observables. Do not pool across them without namespacing.
 
----
+## 5. Tools
 
-## 5. Skills & Progressive Disclosure
+| Command | Asserts | A pass means |
+|---|---|---|
+| `python -m pytest tests/ -q` | The full suite | Every test passed on the interpreter you ran |
+| `python scripts/harness_gate.py` | Gates 1–11, in order | Boundary, skills, paths, root, docs, API set, versions, Python policy, import shadowing |
+| `python scripts/release_gate.py` | Release readiness | Run before tagging |
+| `mkdocs build --strict` | Docs build | RTD sets `fail_on_warning`, so a warning here is a failed publish |
 
-- **Canonical Skill Location**: The single tracked, canonical project skill source is `omission/.claude/skills/<skill-name>/SKILL.md`.
-- **Tree Consolidation Invariant**: Never recreate or mount `.agents/skills/`. This repository has an automated tripwire test (`omission/tests/test_skill_tree_consolidation.py`) that strictly prohibits `.agents/skills/` to prevent duplicate tree drift.
-- **Pre-Creation Verification**: Before creating, moving, or mounting any skill trees, agents must inspect existing ownership and uniqueness tests.
-- **Domain Skills**:
-  - `omission-data`: Corpus manifest, file paths, NWB addressing, electrode/probe maps.
-  - `omission-signal`: LFP filtering, TFR computation, artifact detection and repair.
-  - `omission-spiking`: Spike extraction, PSTH, firing rate metrics, response latency.
-  - `omission-statistics`: Permutation nulls, FDR correction, Clopper-Pearson CIs, GLMM.
-  - `omission-figures`: Publication palette, multi-panel layouts, SVG/PNG rendering.
-  - `labyrinth`: Evidence graph protocol in `omission/artifacts/.lab/`.
-  - `numerical-computing`: Vectorized NumPy/SciPy operations, numerical stability, GPU backends.
-  - `biophysical-modeling`: Laminar CSD, biophysical simulation primitives.
+Supported interpreters are declared in `pyproject.toml` and enforced by Gate 8. CI tests
+the floor and the newest declared version.
+
+## 6. Skills
+
+Load the skill before doing the work rather than reinventing its contents.
+
+| Skill | Covers |
+|---|---|
+| `jnwb` | Router, safeguards, entry point |
+| `jnwb-nwb-data` | NWB inspection, paths, metadata, electrodes, addressing |
+| `jnwb-spiking` | Raster/PSTH, latency, causal smoothing, unit QC |
+| `jnwb-lfp-spectral` | Filtering, TFR, band power, artifact repair |
+| `jnwb-statistics` | Bootstrap, permutation, multiple comparisons, RNG |
+| `jnwb-population` | Decoding, trajectories, jRSA, population geometry |
+| `jnwb-connectivity` | Granger, PSI, transfer entropy |
+| `jnwb-figures` | Visual QC, plotting, figure export |
+
+Agent definitions live in `.claude/agents/` and are tracked, so a fresh clone has them.
+
+## 7. Changes
+
+- Smallest change that reaches the acceptance you defined. No drive-by edits.
+- Stage exact paths. Never `git add .` or `-A`.
+- Confirm branch and upstream before commit, push, or rebase. Read the target before
+  deleting or overwriting.
+- Preserve originals; write revisions as new files.
+- Commit or push only when asked.
+- A public API change is announced in `CHANGELOG.md` and carries a deprecation path where
+  one is possible.
+- No secrets in the repository, context, or transcripts. If one is exposed, stop, say so,
+  and recommend rotation.
+
+## 8. Writing
+
+Cut adjective stacks, negation ("X is not Y"), restated obviousness, repeated caveats, and
+hedged claims that should be deletions. If something is unverified, remove it rather than
+labelling it. Say "policy" or "rule", never "doctrine" or "governance". Lead with the
+result.

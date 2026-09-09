@@ -186,3 +186,47 @@ def test_representative_routing_probes():
 
     # 7. Publication graphics
     jnwb.setup_vector_graphics()
+
+
+class TestSkillsDoNotCarryDriftingCounts:
+    """A count written into a skill file goes stale silently and misleads an agent.
+
+    skills/jnwb/SKILL.md claimed "All 101 exports resolve" against a live 111, and
+    "passes 446+ tests" against 527. Both had drifted without failing anything.
+    """
+
+    SKILL_ROOT = Path(__file__).resolve().parents[1] / "skills"
+
+    def _skill_files(self):
+        files = sorted(self.SKILL_ROOT.glob("*/SKILL.md"))
+        assert files, "no skill files found; this test would pass vacuously"
+        return files
+
+    def test_no_hardcoded_export_or_test_counts(self):
+        patterns = [
+            re.compile(r"\b\d{2,5}\s+(?:public\s+|exported\s+)?(?:exports?|symbols?)\b", re.I),
+            re.compile(r"\b\d{2,5}\+?\s+tests?\b", re.I),
+            re.compile(r"\bpasses\s+\d{2,5}", re.I),
+        ]
+        offenders = []
+        for path in self._skill_files():
+            for line_no, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+                if any(p.search(line) for p in patterns):
+                    offenders.append(f"{path.parent.name}/SKILL.md:{line_no}: {line.strip()}")
+        assert offenders == [], (
+            "skill files must not state counts; run the check and let jnwb.__all__ be the "
+            "source of truth: " + "; ".join(offenders)
+        )
+
+    def test_skills_do_not_reference_a_removed_docs_toolchain(self):
+        """A skill telling an agent to run a command that no longer exists wastes a turn."""
+        repo_root = self.SKILL_ROOT.parent
+        has_sphinx = (repo_root / "docs" / "conf.py").exists()
+        offenders = []
+        for path in self._skill_files():
+            text = path.read_text(encoding="utf-8")
+            if "sphinx" in text.lower() and not has_sphinx:
+                offenders.append(path.parent.name)
+        assert offenders == [], (
+            f"these skills reference sphinx, which this repo no longer builds: {offenders}"
+        )

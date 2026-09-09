@@ -20,7 +20,6 @@ _build/
 docs/_build/
 site/
 
-
 # data / derived / generated (not source)
 # omission project (local only, untracked on remote)
 omission/
@@ -114,57 +113,26 @@ gallery_src/
 run_schema_test.py
 
 # local
-.claude/settings.local.json
 .env
 .env.*
 .DS_Store
 
 # Agent workspace / IDE
-# 2026-08-10: .claude/skills/ is now the single tracked canonical skill source (see
-# omission/artifacts/.lab/agent-harness-audit-20260810.json P1 item -- .agents/skills/ was a
-# stale, drifted duplicate and has been retired).
 #
-# 2026-08-12 harness reset: settings.json is now un-ignored too. It carries the permission
-# policy (deny `git add .`/`-A`, force-push, hard reset) and is doctrine, not machine-local
-# preference -- left untracked, a fresh clone silently resurrects the policy gap. settings.
-# local.json stays ignored: that IS machine-local, and the copy retired in this reset was
-# granting `Bash(git add *)` in direct contradiction of settings.json.
-#
-# specific, travels with the project). This root .claude/* block only governs the root tree --
-# and stays fully tracked by default. Root .claude/skills/ is reserved for future *generic jnwb*
-# skills and is legitimately empty today.
-.claude/
+# .claude/ was ignored wholesale, which meant the agent definitions in .claude/agents/
+# never reached a clone: a fresh checkout got zero agents and no error. settings.json
+# had the same problem, despite a comment here claiming it was already un-ignored.
+# Both now travel with the repository. settings.local.json stays out -- that one really
+# is machine-local.
+.claude/*
+!.claude/agents/
+!.claude/settings.json
+.claude/settings.local.json
 .cursor/
 .vscode/
 .idea/
 .agents/
 
-# Local configuration files
-
-# Whitelist developer progress/plans/review JSON files
-# Labyrinth graph state -- the PRP->Labyrinth migration (2026-07-28) never extended this
-# whitelist to the replacement system, so the project's own knowledge graph was never
-# git-tracked (found and fixed 2026-07-31, same session that found the analogous skill-
-# registry gap left by the same migration).
-
 # scratch and build artifacts
 tmp/
 
-# Large regenerable or archival binaries. The generators are tracked; the products are not.
-
-# Private, controlling analysis goal (2026-08-24). Kept on disk, not tracked -- it is not public
-# jnwb documentation, public API doctrine, general-purpose skill content, or manuscript prose.
-# Do not promote its content into a tracked file without an explicit decision to do so.
-
-# omission/context/figures holds the manuscript figures 01-07 and is TRACKED on purpose.
-# Only the finalized per-figure deliverables are tracked; nested working directories
-# (svg/, artifacts/, supplements/) hold multi-MB/GB intermediates and stay ignored.
-# 2026-08-2x: the finalized deliverables were moved into their own subfolder. Whitelisted
-# here too so the move doesn't silently drop them from tracking (found 2026-08-27: the move
-# fell outside the flat-path patterns above and the files went untracked/ignored).
-
-# 2026-09-02: the atlas publishes a small set of reviewed, identifier-anonymised tables derived
-# from frozen receipts. Those tables are SOURCE (reviewed and tracked); everything the builder
-# generates from them is not. The *.csv and *.json rules above are global, so the tracked tables
-# need an explicit exception -- kept as narrow as possible, naming exactly one directory.
-# Generated site and the private identifier mapping: never tracked, never published.

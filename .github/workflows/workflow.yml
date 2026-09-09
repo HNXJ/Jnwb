@@ -69,10 +69,6 @@ jobs:
         run: |
           python scripts/harness_gate.py
 
-      - name: Build documentation with Sphinx (warning-free gate)
-        run: |
-          sphinx-build -W -b html docs docs/_build/html
-
       - name: Build documentation with MkDocs (strict)
         run: |
           mkdocs build --strict

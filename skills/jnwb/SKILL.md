@@ -18,8 +18,8 @@ Activate this skill when the user asks for generic electrophysiology analysis, t
 - **Visual QC, raster PSTH plotting, multi-format figure export**: delegate to `jnwb-figures`
 
 ## 3. High-Performance Acceleration (CuPy & Joblib)
-- **GPU / CuPy Acceleration**: Operations supporting GPU execution accept `device='cuda'` (with automated fallback to CPU if unavailable). Use `backend='cupy'` for distance matrix speedups in `jrsa`.
-- **Parallel CPU Processing**: Batch shuffles, permutation testing, and pairwise channel matrices support `n_jobs: int = 1` (or `n_jobs=-1` for all CPU cores) using `joblib.Parallel`.
+- **GPU**: Operations supporting GPU execution accept `device='cuda'`, resolved once per call. If no CUDA device is present the call warns and runs on CPU; the result records which device produced it. Use `backend='cupy'` for distance-matrix speedups in `jrsa`.
+- **Parallel CPU**: `n_jobs` is available on `cluster_permutation_test`, `cross_area_coherence`, and the `jrsa` permutation/bootstrap paths. Default is 1 everywhere except `jrsa`, which defaults to -1. Results are identical for any `n_jobs`. It pays only when serial work exceeds about a second.
 - **Artifact Rejection & Repair**: Pre-filter LFP matrices using `bad_channels_from_correlation`, `consensus_bad_trials`, and `repair_lfp_trials`.
 
 ## 4. Core Scientific Safeguards & Invariants
@@ -47,7 +47,12 @@ tfr = jnwb.complex_tfr(data, fs=1000.0, freqs=freqs)
 ```
 
 ## 7. Verification
-- All 101 exports resolve from `import jnwb`.
-- `mkdocs build --strict` and `sphinx-build -W` compile docs warning-free.
-- `pytest tests/` passes 446+ tests.
+Run these rather than quoting counts; `jnwb.__all__` is the source of truth for the public surface.
+
+```bash
+python -c "import jnwb; assert all(hasattr(jnwb, n) for n in jnwb.__all__)"
+python scripts/harness_gate.py
+python -m pytest tests/ -q
+mkdocs build --strict
+```
 

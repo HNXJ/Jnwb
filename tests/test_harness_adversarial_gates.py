@@ -185,11 +185,13 @@ def summarize_log_normal_effects(unit_db_modulations):
         assert len(v3) >= 1 and any("beta/gamma" in v for v in v3)
         (fake_docs / "11_extending_and_development.md").write_text(clean_text, encoding="utf-8")
 
-        # 4. Leak study-specific concept into artifacts/AGENTS.md
-        (fake_artifacts / "AGENTS.md").write_text("Study focuses on omission-linked dynamics\n", encoding="utf-8")
+        # 4. Leak study-specific concept into the root AGENTS.md.
+        # artifacts/AGENTS.md was a near-duplicate of the root file and was removed in
+        # 0.1.3; the gate no longer scans that path.
+        (tmp_path / "AGENTS.md").write_text("Study focuses on omission-linked dynamics\n", encoding="utf-8")
         v4 = check_dataset_leakage(tmp_path)
         assert len(v4) == 1 and "omission-linked" in v4[0]
-        (fake_artifacts / "AGENTS.md").write_text(clean_text, encoding="utf-8")
+        (tmp_path / "AGENTS.md").write_text(clean_text, encoding="utf-8")
 
         # 5. Leak forbidden causal assertion into skills
         (fake_skills / "SKILL.md").write_text("Demonstrates that LFP drives SPK\n", encoding="utf-8")
@@ -295,7 +297,7 @@ class TestDocumentationDriftGates:
     def _scratch_repo(tmp_path: Path) -> Path:
         import shutil
         (tmp_path / "docs").mkdir(parents=True, exist_ok=True)
-        for rel in ("docs/api.md", "docs/conf.py", "mkdocs.yml", "README.md"):
+        for rel in ("docs/api.md", "mkdocs.yml", "README.md"):
             shutil.copy(REPO_ROOT / rel, tmp_path / rel)
         return tmp_path
 
@@ -341,21 +343,15 @@ class TestDocumentationDriftGates:
         violations = check_docs_version_matches_package(repo)
         assert any("DOCS_VERSION_MISMATCH" in v and "README.md" in v for v in violations)
 
-    def test_hardcoded_conf_version_is_caught_even_beside_a_derived_one(self, tmp_path):
-        """The hole this test was written for: one derived assignment must not excuse another.
-
-        An earlier draft of gate 10 only asked whether *some* version/release assignment derived
-        from jnwb.__version__, so a hardcoded ``version = '0.0.9'`` passed unnoticed behind a
-        correct ``release = jnwb.__version__``.
-        """
-        repo = self._scratch_repo(tmp_path)
-        cf = repo / "docs/conf.py"
-        text = cf.read_text(encoding="utf-8").replace(
-            "version = jnwb.__version__", "version = '0.0.9'", 1)
-        assert "release = jnwb.__version__" in text, "the derived sibling must still be present"
-        cf.write_text(text, encoding="utf-8")
-        violations = check_docs_version_matches_package(repo)
-        assert any("DOCS_VERSION_NOT_DERIVED" in v for v in violations)
+    def test_sphinx_toolchain_is_fully_removed(self):
+        """Removing a toolchain means removing its config, deps, and CI leg together."""
+        assert not (REPO_ROOT / "docs" / "conf.py").exists()
+        assert not (REPO_ROOT / "docs" / "_static").exists()
+        pyproject = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
+        for dep in ("sphinx", "myst-parser"):
+            assert dep not in pyproject, f"{dep} still declared in pyproject.toml"
+        workflow = (REPO_ROOT / ".github/workflows/workflow.yml").read_text(encoding="utf-8")
+        assert "sphinx" not in workflow.lower(), "CI still runs a sphinx build"
 
     def test_no_hardcoded_symbol_counts_remain_in_prose(self):
         """The original defect: a symbol count written into documentation."""

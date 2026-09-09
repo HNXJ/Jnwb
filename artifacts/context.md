@@ -91,7 +91,7 @@ it was expected to print.
 ```bash
 python scripts/harness_gate.py                 # operational and boundary gates
 mkdocs build --strict                          # documentation builds warning-free
-python -m sphinx -W -b html docs docs/_build/html
+mkdocs build --strict
 python -m pytest -n auto tests/                # full suite
 ```
 

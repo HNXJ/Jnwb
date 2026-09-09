@@ -75,9 +75,9 @@ Every module must be protected by deterministic test coverage in `tests/`. Tests
 
 - **Truth Precedence**: Code and direct empirical receipts define implemented behavior. Documentation must describe actual behavior without claiming stronger scientific capabilities than what is implemented and verified.
 - **Lockstep Updates**: Any modification to a public symbol must update both the relevant documentation guide (`docs/`) and repository skill (`skills/`) in the same commit.
-- **Warning-Free Builds**: The Sphinx documentation suite must compile with zero warnings under `-W`:
+- **Warning-Free Builds**: The documentation must compile with zero warnings:
   ```bash
-  python -m sphinx -W -b html docs docs/_build/html
+  mkdocs build --strict
   ```
 
 ---
@@ -156,7 +156,7 @@ All contributors and automated agents must adhere to the 7 scientific invariants
        │
 6. Reconcile     Update docs/ and skills/ in lockstep with code changes.
        │
-7. Sphinx -W     Verify warning-free documentation compilation.
+7. mkdocs strict Verify warning-free documentation compilation.
        │
 8. Harness Gate  Execute python scripts/harness_gate.py.
        │

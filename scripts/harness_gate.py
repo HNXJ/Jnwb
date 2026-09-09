@@ -181,11 +181,19 @@ PYTHON_FLOOR = "3.12"
 PYTHON_SUPPORTED = ("3.12", "3.13", "3.14")   # what the classifiers must claim
 PYTHON_CI_REQUIRED = ("3.12", "3.14")         # floor and head; the matrix must cover both
 
-ALLOWED_ROOT_DIRS = {
-    "jnwb", "tests", "examples", "docs", "skills", "scripts", "omission", "artifacts",
-    ".git", ".github", ".venv", "venv", "env", ".pytest_cache", "dist", "build", "jnwb.egg-info",
-    ".lab_bundle_build", ".claude", ".cursor", ".gemini", "_build", ".tox", "site"
+#: Directories that hold tracked source. Anything else at the root is a mistake.
+SOURCE_ROOT_DIRS = {
+    "jnwb", "tests", "examples", "docs", "skills", "scripts", "artifacts", ".claude", ".github",
 }
+
+#: Build output, caches and environments. Tolerated on disk, but each must be gitignored --
+#: check_root_allowlist does not verify that, so keep this list short and boring.
+EPHEMERAL_ROOT_DIRS = {
+    ".git", ".venv", "venv", "env", ".pytest_cache", ".mypy_cache", ".ruff_cache",
+    "dist", "build", "_build", "site", "jnwb.egg-info", ".tox", ".lab_bundle_build",
+}
+
+ALLOWED_ROOT_DIRS = SOURCE_ROOT_DIRS | EPHEMERAL_ROOT_DIRS
 ALLOWED_ROOT_FILES = {
     ".gitignore", ".readthedocs.yaml", "AGENTS.md", "CHANGELOG.md", "CLAUDE.md",
     "LICENSE", "pyproject.toml", "README.md", ".coverage", "mkdocs.yml"
@@ -271,7 +279,6 @@ def check_docs_version_matches_package(repo_root: Optional[Path] = None) -> List
     Checked locations, each a place a literal can drift:
       * mkdocs.yml ``extra.jnwb_version`` (consumed by the version hook)
       * ``jnwb==X.Y.Z`` install pins in README.md and docs/*.md
-      * docs/conf.py, which must derive from jnwb.__version__ rather than hardcode
     """
     root = repo_root or REPO_ROOT
     import jnwb
@@ -298,21 +305,6 @@ def check_docs_version_matches_package(repo_root: Optional[Path] = None) -> List
                     f"DOCS_VERSION_MISMATCH: {md.relative_to(root).as_posix()} pins "
                     f"jnwb=={found}, but jnwb.__version__ is {expected}")
 
-    conf = root / "docs" / "conf.py"
-    if conf.exists():
-        conf_text = conf.read_text(encoding="utf-8")
-        assignments = re.findall(r"^\s*(version|release)\s*=\s*(.+?)\s*$", conf_text,
-                                 flags=re.MULTILINE)
-        if not assignments:
-            violations.append(
-                "DOCS_VERSION_NOT_DERIVED: docs/conf.py sets neither version nor release")
-        # EVERY such assignment must derive. Checking only that *some* assignment derives lets a
-        # hardcoded `version = '0.0.9'` hide behind a correct `release = jnwb.__version__`.
-        for name, rhs in assignments:
-            if "jnwb.__version__" not in rhs:
-                violations.append(
-                    f"DOCS_VERSION_NOT_DERIVED: docs/conf.py sets {name} = {rhs}; it must "
-                    "derive from jnwb.__version__ rather than hardcode a literal")
     return violations
 
 
@@ -356,7 +348,7 @@ def check_dataset_leakage(repo_root: Optional[Path] = None) -> List[str]:
             target_files.append(skill_file)
             
     # 3. Core harness authority and developer guides
-    for harness_name in ["AGENTS.md", "artifacts/AGENTS.md", "docs/11_extending_and_development.md"]:
+    for harness_name in ["AGENTS.md", "docs/11_extending_and_development.md"]:
         harness_file = root / harness_name
         if harness_file.exists():
             target_files.append(harness_file)
@@ -379,7 +371,7 @@ def check_dataset_leakage(repo_root: Optional[Path] = None) -> List[str]:
 
 
 def check_version_consistency(repo_root: Optional[Path] = None) -> List[str]:
-    """Gate 7 (Release Consistency): Assert package version matches pyproject.toml and docs/conf.py."""
+    """Gate 7 (Release Consistency): Assert package version matches pyproject.toml."""
     root = repo_root or REPO_ROOT
     import jnwb
     version = getattr(jnwb, "__version__", None)
