@@ -1,6 +1,33 @@
 # jnwb 0.1.3 — release roadmap (PLAN ONLY, nothing here is implemented)
 
-**Status:** draft plan, 2026-09-09. **Branch:** `dev`, tip `07e9536`.
+**Status:** in progress, 2026-09-09. **Branch:** `dev`.
+
+| Step | State | Commit |
+|---|---|---|
+| T0 baseline, 3.12 + 3.14 | done | -- |
+| T1 gate renumbering | done | `df5c5f5` |
+| T2 Python floor policy | done | `df5c5f5` |
+| T3 import-shadowing gate | done | `df5c5f5` |
+| T4 `PACKAGE_ROOT` rename | done | `37acd0e` |
+| T5 `cross_area_coherence` | done | `6d4c6c7` |
+| -- jnwb/ edit freeze lifted | done | `718b6fc` |
+| T6a backend consolidation | done | `228c81c` |
+| T6b `n_jobs` beyond jrsa | open | -- |
+| T7 agent context | open | -- |
+| T8 bloat and root | open | -- |
+| T9 logo | open | -- |
+| T10 release 0.1.3 | open | -- |
+| T11 reply to JNWB_REQUESTS | open | -- |
+
+Decisions taken since drafting: CI matrix `[3.12, 3.14]` (Hamm); classifiers follow declared
+support, so 3.12/3.13/3.14; the `jnwb/` edit freeze is lifted, which removes the constraint
+that shaped the original scoping (§1 open decisions 1-2 and the freeze caveat are closed).
+
+**Prose rules (Hamm, 2026-09-09).** Cut adjective stacks, negation ("X is not Y"), restated
+obviousness, repeated caveats, and hedged claims that should be deletions. Avoid the words
+doctrine and governance; say policy or rule. Captured as the user-level `slop-removal` skill and
+applied to every file this release touches, including `docs/common_mistakes.md`. This adds a
+standing acceptance check to T8: prose changed in 0.1.3 must pass those rules.
 **Current version:** `jnwb.__version__ == '0.1.1'` (`jnwb/__init__.py:14`). `0.1.2` was never cut —
 the `requires-python` fix landed on `dev` as `07e9536` and is unreleased.
 **Inherited test claim:** `527 passed, 14 skipped, 0 failed` on CPython 3.14.3, per
