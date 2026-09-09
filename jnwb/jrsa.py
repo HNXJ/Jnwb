@@ -21,6 +21,8 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
+from ._parallel import parallel_map
+
 # ---------------------------------------------------------------------------
 # Public result type
 # ---------------------------------------------------------------------------
@@ -918,12 +920,12 @@ def _to_backend(arr, backend_ctx: dict) -> np.ndarray:
 
 
 def _parallel_map(fn, items, n_jobs=-1):
-    """Map fn over items, optionally in parallel with joblib."""
-    try:
-        from joblib import Parallel, delayed
-        return Parallel(n_jobs=n_jobs)(delayed(fn)(it) for it in items)
-    except ImportError:
-        return [fn(it) for it in items]
+    """Map fn over items, delegating to the shared chunked implementation.
+
+    Kept as a thin alias: jrsa's public functions default to n_jobs=-1, unlike the rest
+    of the library, and callers depend on that.
+    """
+    return parallel_map(fn, items, n_jobs=n_jobs)
 
 
 def _chunk_tensor(arr, batch_size, axis=-1):

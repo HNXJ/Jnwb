@@ -30,6 +30,8 @@ import warnings
 from typing import Dict, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
+
+from ._parallel import parallel_map, spawn_seeds
 import pandas as pd
 from scipy import stats
 
@@ -1035,6 +1037,7 @@ def cluster_permutation_test(
     n_permutations: int = 1000,
     tail: str = "both",
     rng: Optional[np.random.Generator] = None,
+    n_jobs: int = 1,
 ) -> Dict[str, Union[np.ndarray, List[Dict[str, Union[float, np.ndarray]]]]]:
     """Non-parametric cluster-based permutation test for multidimensional signals (Maris & Oostenveld, 2007).
 
@@ -1076,6 +1079,9 @@ def cluster_permutation_test(
         tail: One of 'both' (positive and negative clusters), 'greater' (positive clusters only),
             or 'less' (negative clusters only). Default is 'both'.
         rng: An explicit numpy.random.Generator instance (e.g. np.random.default_rng(seed)).
+        n_jobs: CPU workers for the permutation loop. Default 1 (serial); -1 uses every
+            core. Results are identical for any n_jobs, because each permutation is
+            seeded from `rng` before the loop starts.
 
     Returns:
         Dict with:
@@ -1192,36 +1198,42 @@ def cluster_permutation_test(
     obs_clusters = _extract_clusters(obs_t)
 
     # 2. Permutation null distribution of extremal cluster statistic
-    max_null_stats = np.empty(n_permutations, dtype=float)
     flip_shape = (n_obs, *([1] * (diff.ndim - 1))) if paired else ()
 
-    for b in range(n_permutations):
+    # One seed per permutation, drawn before any worker starts, so permutation b uses
+    # the same randomness whether this runs serially or across twelve cores. Advancing
+    # the shared generator inside the loop would tie the result to scheduling order.
+    permutation_seeds = spawn_seeds(rng, n_permutations)
+
+    def _one_permutation(seed: np.random.SeedSequence) -> float:
+        perm_rng = np.random.default_rng(seed)
         if paired:
-            flips = rng.choice([-1.0, 1.0], size=flip_shape)
-            perm_diff = diff * flips
-            p_t = _calc_t_paired(perm_diff)
+            flips = perm_rng.choice([-1.0, 1.0], size=flip_shape)
+            p_t = _calc_t_paired(diff * flips)
         else:
             # Delegate permutation strictly to canonical permute_labels
             p_labels = permute_labels(
                 orig_labels,
                 groups=pooled_groups,
                 scheme=scheme,
-                rng=rng,
+                rng=perm_rng,
             )
             idx0 = np.flatnonzero(p_labels == 0)
             idx1 = np.flatnonzero(p_labels == 1)
             p_t = _calc_t_unpaired(pooled[idx0], pooled[idx1])
 
         p_clusters = _extract_clusters(p_t)
-        if len(p_clusters) > 0:
-            if tail == "greater":
-                max_null_stats[b] = max(c[0] for c in p_clusters)
-            elif tail == "less":
-                max_null_stats[b] = min(c[0] for c in p_clusters)
-            else:  # both
-                max_null_stats[b] = max(abs(c[0]) for c in p_clusters)
-        else:
-            max_null_stats[b] = 0.0
+        if len(p_clusters) == 0:
+            return 0.0
+        if tail == "greater":
+            return max(c[0] for c in p_clusters)
+        if tail == "less":
+            return min(c[0] for c in p_clusters)
+        return max(abs(c[0]) for c in p_clusters)
+
+    max_null_stats = np.asarray(
+        parallel_map(_one_permutation, permutation_seeds, n_jobs=n_jobs), dtype=float
+    )
 
     # 3. Exact finite Monte Carlo p-values with (1 + k) / (B + 1)
     cluster_results: List[Dict[str, Union[float, np.ndarray]]] = []

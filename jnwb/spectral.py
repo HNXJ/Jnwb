@@ -32,6 +32,7 @@ from scipy import signal, stats
 import pandas as pd
 
 from ._backend import CUDA, resolve_device, warn_device_fallback
+from ._parallel import parallel_map
 
 log = logging.getLogger(__name__)
 
@@ -311,6 +312,7 @@ def cross_area_coherence(
     device: str = 'cpu',
     rng: Optional[np.random.Generator] = None,
     n_surrogates: int = 50,
+    n_jobs: int = 1,
 ) -> Dict:
     """
     Compute frequency-resolved coherence between two LFP signals.
@@ -343,6 +345,10 @@ def cross_area_coherence(
                       estimator the smallest attainable p-value is
                       ``1 / (n_surrogates + 1)``, so 1/51 = 0.0196 at the default. To
                       reject at a smaller alpha, raise this; the cost is linear.
+        n_jobs: CPU workers for the surrogate spectra. Default 1 (serial); -1 uses every
+                core. Results are identical for any n_jobs. Worth raising only when the
+                surrogates take more than about a second in total, since the process
+                pool costs a few seconds to start.
 
     Returns:
         Dict with:
@@ -463,8 +469,11 @@ def cross_area_coherence(
         # Sharing surrogates across bands is what makes a max-statistic or cluster
         # correction valid. The per-band p-values are therefore dependent, which the
         # docstring states, since a Bonferroni over them would be invalid.
-        surrogate_spectra = [estimator(lfp_area1, np.roll(lfp_area2, int(shift)))[1]
-                             for shift in shifts]
+        surrogate_spectra = parallel_map(
+            lambda shift: estimator(lfp_area1, np.roll(lfp_area2, int(shift)))[1],
+            list(shifts),
+            n_jobs=1 if device_requested_cuda else n_jobs,
+        )
 
         for band_name, (fmin, fmax) in freq_bands.items():
             mask = (frequencies >= fmin) & (frequencies <= fmax)
@@ -489,6 +498,9 @@ def cross_area_coherence(
     # work and recomputes everything, observed value included, on the CPU, so the
     # returned values share one estimator, named in `device_used`.
     device_used = resolve_device(device, context='cross_area_coherence', prefer='cupy')
+    # CPU workers are pointless once the estimator is on the GPU: each process would
+    # build its own CUDA context, competing for the same device.
+    device_requested_cuda = device_used == CUDA
     if device_used == CUDA:
         try:
             computed = _compute_all(_coherence_gpu)
