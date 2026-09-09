@@ -1,11 +1,16 @@
-"""Guards the jnwb/ freeze boundary (CLAUDE.md, 2026-08-19): jnwb/ is frozen and must remain
-importable and usable with zero dependency on omission/, except for explicitly authorized
-exceptions. As of 2026-09-03 there are NONE: jnwb/ imports nothing from omission/, so its
-scientific behaviour cannot depend on whether a project package is installed.
+"""Guards the jnwb/ LAYERING boundary: jnwb/ must remain importable and usable with zero
+dependency on any project folder. As of 2026-09-03 there are no exceptions -- jnwb/ imports
+nothing from omission/ -- so its scientific behaviour cannot depend on whether a project
+package happens to be installed.
 
-This is the automated guarantee behind the freeze: a human reading CLAUDE.md's freeze policy is
-not a technical guarantee that no new jnwb/ change quietly reintroduces an omission/ coupling.
-These tests are.
+Naming note (corrected 2026-09-09): this file is called "frozen_boundary" and its docstring
+used to claim it enforced the jnwb/ edit freeze. It never did, and could not -- nothing here
+looks at whether jnwb/ was edited. It enforces the dependency DIRECTION. The edit freeze was
+lifted on 2026-09-09 (see CLAUDE.md); this boundary is unaffected and still live, because it
+never rested on the freeze.
+
+A human reading a policy is not a technical guarantee that no new jnwb/ change quietly
+reintroduces a project coupling. These tests are.
 """
 from __future__ import annotations
 

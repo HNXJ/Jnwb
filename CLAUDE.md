@@ -15,21 +15,34 @@ supersedes a project-level scheduling decision per this project's own precedence
 commit/push activity may resume for analysis-phase work; nothing about this reinstates unrelated
 normalization/cleanup work (see "Analysis-only" doctrine in `omission/CLAUDE.md`).
 
-**The `jnwb/` freeze itself is unaffected and remains in force** — it was never justified by the
-scheduling pause; it is justified by `omission` being `jnwb`'s primary dataset and test corpus.
-`jnwb/` stays frozen and read-only. Do not edit, add to, or refactor anything under `jnwb/`
-except in the rare case Hamm explicitly authorizes it for that specific change. Every
-omission-track task (analyses, figures, scripts, evidence) works *through* the frozen API, never
-by extending it. If a task seems to need a new `jnwb` function or a change to an existing one,
-stop and say so rather than writing it.
+**The `jnwb/` edit freeze is LIFTED (2026-09-09, Hamm's explicit instruction).** It is
+superseded, not suspended, and must not be reinstated by inference.
 
-All omission-related work — scripts, figures, evidence, tests, docs — stays inside `omission/`.
+The freeze rested on a premise: that the package was stable, so the cost of editing it exceeded
+the benefit. That premise was an **AI agent's assertion, never a verified claim** — and it is
+false while defects remain open. `JNWB_REQUESTS.md` carried seven, one of them a blocker that
+made 0.1.1 uninstallable on every current interpreter. A freeze justified by stability cannot
+survive evidence that the package is not stable; a stale freeze protects defects rather than
+consumers. Hamm's ruling: *"when there is even one open issue, freeze is stale."*
 
-**The freeze is enforced, not just stated**: `tests/test_jnwb_frozen_boundary.py` asserts
-`jnwb/` has zero omission/ imports beyond the one authorized exception (see tripwire 3 below),
-that it stays lazy (function-body-local, not module-level), that `import jnwb` succeeds even with
-omission/ blocked from `sys.path` entirely, and that every `jnwb.__all__` name actually resolves.
-A change that breaks the freeze fails this test before it fails a human review.
+`jnwb/` is therefore editable under ordinary discipline — smallest justified change, invariants
+preserved, receipts for every claim. What replaces the freeze is not permission to churn: it is
+the requirement that each change to `jnwb/` names the defect it closes.
+
+Two protections that the word "freeze" was doing double duty for **remain in full force**, and
+neither depended on the edit freeze:
+
+1. **The layering invariant** (tripwire 3): `jnwb/` imports nothing from any project folder.
+   This is what `tests/test_jnwb_frozen_boundary.py` actually asserts — zero `omission/` imports,
+   that `import jnwb` succeeds with `omission/` blocked from `sys.path` entirely, and that every
+   `jnwb.__all__` name resolves. Note the file's own docstring frames itself as enforcing the
+   freeze; it never did. It enforces layering, which is a different and still-live invariant.
+2. **API stability as a contract, not a prohibition**: `jnwb.__all__` is what consumers depend
+   on. Breaking changes are allowed, but must be deliberate, announced in `CHANGELOG.md`, and
+   carry a deprecation path where one is possible (see `paths.PACKAGE_ROOT`, 0.1.3).
+
+All omission-related work — scripts, figures, evidence, tests, docs — still stays inside
+`omission/`. That is a layering rule, not a consequence of the freeze.
 
 **Still protected, unrelated to phase**: paths that were dirty/uncommitted as of 2026-08-22 —
 pre-existing concurrent figure/script work under `omission/context/figures/` and
