@@ -1,4 +1,4 @@
-# jnwb 0.1.3 — release roadmap (PLAN ONLY, nothing here is implemented)
+# jnwb 0.1.3 — release roadmap
 
 **Status:** in progress, 2026-09-09. **Branch:** `dev`.
 
