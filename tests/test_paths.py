@@ -89,7 +89,7 @@ class TestOverrideAndEnvVarPrecedence:
 
 class TestOutputsAndArtifacts:
     def test_default_fallback_to_process_cwd(self):
-        assert paths.REPO_ROOT.exists()
+        assert paths.PACKAGE_ROOT.exists()
         assert paths.outputs_dir() == Path.cwd() / "outputs"
         assert paths.artifacts_dir() == Path.cwd() / "artifacts"
         assert paths.layer_masks_path() == Path.cwd() / "outputs" / "publication_visual_review" / "area_layer_tfr" / "layer_masks.json"
@@ -98,7 +98,7 @@ class TestOutputsAndArtifacts:
         """Simulate jnwb installed under site-packages and verify outputs/artifacts resolve to consumer cwd."""
         simulated_site_packages = tmp_path / "site-packages" / "jnwb"
         simulated_site_packages.mkdir(parents=True)
-        monkeypatch.setattr(paths, "REPO_ROOT", simulated_site_packages.parent)
+        monkeypatch.setattr(paths, "PACKAGE_ROOT", simulated_site_packages.parent)
         monkeypatch.setattr(paths, "__file__", str(simulated_site_packages / "paths.py"))
 
         consumer_project_dir = tmp_path / "consumer_project"
@@ -148,7 +148,7 @@ class TestOutputsAndArtifacts:
 class TestDescribeNeverRaises:
     def test_describe_reports_unconfigured_without_raising(self):
         result = paths.describe()
-        assert result["REPO_ROOT"]["exists"] is True
+        assert result["PACKAGE_ROOT"]["exists"] is True
         nwb_key = f"nwb_dir (${paths.ENV_NWB_DIR})"
         assert result[nwb_key]["configured"] is False
         assert result[nwb_key]["path"] is None
@@ -159,3 +159,53 @@ class TestDescribeNeverRaises:
         nwb_key = f"nwb_dir (${paths.ENV_NWB_DIR})"
         assert result[nwb_key]["configured"] is True
         assert result[nwb_key]["path"] == str(Path("Y:/from_env"))
+
+
+class TestPackageRootRename:
+    """JNWB-007: REPO_ROOT was jnwb's own checkout under a name consumers read as theirs.
+
+    It resolves from paths.py's own location, so in a consuming project it points at
+    the jnwb checkout. The path is well-formed and simply names the wrong tree, so
+    nothing fails loudly. One project had 41 live files building paths from it.
+    """
+
+    def test_package_root_is_the_jnwb_package_parent(self):
+        assert paths.PACKAGE_ROOT == Path(paths.__file__).resolve().parent.parent
+        assert (paths.PACKAGE_ROOT / "jnwb" / "paths.py").exists()
+
+    def test_repo_root_alias_still_resolves(self):
+        """Existing callers keep working for one release."""
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
+            assert paths.REPO_ROOT == paths.PACKAGE_ROOT
+
+    def test_repo_root_access_warns_and_names_the_replacement(self):
+        with warnings.catch_warnings(record=True) as record:
+            warnings.simplefilter("always")
+            paths.REPO_ROOT
+        deprecations = [w for w in record if issubclass(w.category, DeprecationWarning)]
+        assert len(deprecations) == 1, [str(w.message) for w in record]
+        message = str(deprecations[0].message)
+        assert "PACKAGE_ROOT" in message
+        assert "0.2.0" in message, "a deprecation must say when it is removed"
+
+    def test_package_root_does_not_warn(self):
+        with warnings.catch_warnings(record=True) as record:
+            warnings.simplefilter("always")
+            paths.PACKAGE_ROOT
+        assert [w for w in record if issubclass(w.category, DeprecationWarning)] == []
+
+    def test_public_surface_advertises_the_new_name_only(self):
+        assert "PACKAGE_ROOT" in paths.__all__
+        assert "REPO_ROOT" not in paths.__all__, "a deprecated name must not be advertised"
+
+    def test_unknown_attribute_still_raises_attribute_error(self):
+        """The module __getattr__ must not swallow real typos."""
+        with pytest.raises(AttributeError):
+            paths.definitely_not_a_real_attribute
+
+    def test_describe_reports_both_keys_during_deprecation(self):
+        """A dict key cannot warn, so the old key survives one release."""
+        result = paths.describe()
+        assert result["PACKAGE_ROOT"]["path"] == str(paths.PACKAGE_ROOT)
+        assert result["REPO_ROOT"] == result["PACKAGE_ROOT"]

@@ -16,13 +16,17 @@ import jnwb
 # Print the status of all registered data roots and their resolution state
 jnwb.paths.describe()
 
-# Access standard repository-internal directories (always guaranteed to resolve)
-repo_root = jnwb.paths.REPO_ROOT
+# Where the INSTALLED jnwb package lives. This is jnwb's own root, never yours --
+# anchor to your own file (Path(__file__).resolve().parent.parent) for your project.
+jnwb_package_root = jnwb.paths.PACKAGE_ROOT
+
+# Outputs and artifacts resolve against the process working directory, so they
+# follow the consuming project rather than the install location.
 outputs = jnwb.paths.outputs_dir()
 artifacts = jnwb.paths.artifacts_dir()
 
-# Resolve a registered data root
-nwb_dir = jnwb.paths.get_path("nwb_dir")
+# Resolve an external data root (raises FileNotFoundError naming the env var to set)
+nwb_dir = jnwb.paths.nwb_dir()
 ```
 
 ### Environment Variable Mapping
