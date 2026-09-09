@@ -30,6 +30,28 @@ cd jnwb
 pip install -e ".[all]"
 ```
 
+### Do not clone other projects inside this checkout
+
+An editable install writes a `.pth` file containing the **repository root**, not just
+`jnwb/`. Every top-level package sitting beside `jnwb/` therefore becomes importable
+from any working directory, ahead of a package of the same name elsewhere on your path.
+
+A project cloned inside the jnwb checkout will shadow itself. The failure is silent:
+`import yourproject` returns a well-formed module, from the wrong copy, and no error is
+raised. `.gitignore` hides the directory from `git status`, which removes the last
+signal you would get. This has happened in practice — two copies of one project
+disagreed on a label, and most importing files took the stale one.
+
+Keep your analysis project in its own directory, beside the jnwb checkout rather than
+inside it. jnwb's own harness enforces the equivalent invariant on this repository
+(`scripts/harness_gate.py`, Gate 11), and the published wheel ships only `jnwb/`.
+
+For a stricter editable install that maps `jnwb` alone instead of the whole root:
+
+```bash
+pip install -e . --config-settings editable_mode=strict
+```
+
 ## Verify
 
 Run the verification snippet in your Python environment:

@@ -204,16 +204,67 @@ def summarize_log_normal_effects(unit_db_modulations):
         assert len(violations) > 0
         assert "VERSION_INCONSISTENCY" in violations[0]
 
-    def test_adversarial_probe_python_target_inconsistency_rejected(self, tmp_path: Path):
-        """Adversarial Probe 9: Non-Python 3.12 targets in pyproject or workflows must be caught."""
-        from scripts.harness_gate import check_python_target_consistency
+    def test_adversarial_probe_python_floor_inconsistency_rejected(self, tmp_path: Path):
+        """Adversarial Probe 9: a floor below the declared one, with a stale classifier."""
+        from scripts.harness_gate import check_python_floor_consistency
         (tmp_path / "pyproject.toml").write_text(
             '[project]\nrequires-python = ">=3.10"\nclassifiers = ["Programming Language :: Python :: 3.10"]\n',
             encoding="utf-8"
         )
-        violations = check_python_target_consistency(tmp_path)
-        assert len(violations) >= 2
-        assert all("PYTHON_TARGET_INCONSISTENCY" in v for v in violations)
+        violations = check_python_floor_consistency(tmp_path)
+        assert any("PYTHON_FLOOR_INCONSISTENCY" in v for v in violations), violations
+        assert any("PYTHON_CLASSIFIER_UNSUPPORTED" in v and "3.10" in v for v in violations), violations
+
+    def test_adversarial_probe_python_upper_pin_rejected(self, tmp_path: Path):
+        """Adversarial Probe 9b: THE 0.1.1 DEFECT. An upper pin must be rejected.
+
+        `requires-python = ">=3.12, <3.13"` shipped in 0.1.1 and made the release
+        uninstallable on every current interpreter -- pip silently resolved users back
+        to 0.1.0, i.e. to *older code than they asked for*. The gate of the day
+        **accepted** that string, because it had been written to enforce "3.12 only".
+        This probe is the reason the gate was rewritten.
+        """
+        from scripts.harness_gate import check_python_floor_consistency
+        (tmp_path / "pyproject.toml").write_text(
+            '[project]\nrequires-python = ">=3.12, <3.13"\n'
+            'classifiers = [\n'
+            '    "Programming Language :: Python :: 3.12",\n'
+            '    "Programming Language :: Python :: 3.13",\n'
+            '    "Programming Language :: Python :: 3.14",\n'
+            ']\n',
+            encoding="utf-8"
+        )
+        violations = check_python_floor_consistency(tmp_path)
+        assert any("PYTHON_UPPER_PIN" in v for v in violations), (
+            "an upper pin on a pure-Python wheel must be rejected; got: " + repr(violations)
+        )
+
+    def test_adversarial_probe_ci_matrix_missing_head_rejected(self, tmp_path: Path):
+        """Adversarial Probe 9c: dropping the newest tested interpreter must be caught.
+
+        A matrix narrowed back to the floor alone is how a "3.12 only" policy gets
+        reintroduced by accident.
+        """
+        from scripts.harness_gate import PYTHON_CI_REQUIRED, check_python_floor_consistency
+        wf = tmp_path / ".github" / "workflows"
+        wf.mkdir(parents=True)
+        (wf / "workflow.yml").write_text(
+            'jobs:\n  test:\n    strategy:\n      matrix:\n'
+            f'        python-version: [ "{PYTHON_CI_REQUIRED[0]}" ]\n',
+            encoding="utf-8"
+        )
+        violations = check_python_floor_consistency(tmp_path)
+        assert any(
+            "PYTHON_CI_UNTESTED" in v and PYTHON_CI_REQUIRED[-1] in v for v in violations
+        ), violations
+
+    def test_declared_support_and_ci_policy_are_coherent(self):
+        """The policy constants themselves must not drift apart."""
+        from scripts.harness_gate import PYTHON_CI_REQUIRED, PYTHON_FLOOR, PYTHON_SUPPORTED
+        assert PYTHON_SUPPORTED[0] == PYTHON_FLOOR, "the floor must be the lowest supported version"
+        assert set(PYTHON_CI_REQUIRED) <= set(PYTHON_SUPPORTED), "CI must not test an undeclared version"
+        assert PYTHON_FLOOR in PYTHON_CI_REQUIRED, "the floor must be tested"
+        assert PYTHON_SUPPORTED[-1] in PYTHON_CI_REQUIRED, "the newest declared version must be tested"
 
     def test_adversarial_probe_hardcoded_test_paths_rejected(self, tmp_path: Path):
         """Adversarial Probe 10: Hardcoded machine-local test paths must be caught."""
@@ -318,3 +369,135 @@ class TestDocumentationDriftGates:
         assert offenders == [], (
             "hardcoded symbol counts found; state the invariant and let gate 9 check it "
             "instead: " + "; ".join(offenders))
+
+
+class TestGateNumberingIntegrity:
+    """A gate report that cites "Gate 9" must name exactly one gate.
+
+    The original defect: docstring numbers drifted from the preflight sequence until
+    "Gate 9" named both the API-set-equality gate and the Python-target gate, and
+    "Gate 2", "Gate 3" and "Gate 6" were each used twice. Numbers are only meaningful
+    if they are unique, so the numbering is checked rather than asserted.
+    """
+
+    @staticmethod
+    def _numbered_gates() -> dict[int, str]:
+        """Map gate number -> function name, read from harness_gate.py docstrings."""
+        import re
+
+        source = (REPO_ROOT / "scripts" / "harness_gate.py").read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        found: dict[int, list[str]] = {}
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.FunctionDef):
+                continue
+            doc = ast.get_docstring(node) or ""
+            match = re.match(r"Gate (\d+)\b", doc)
+            if match:
+                found.setdefault(int(match.group(1)), []).append(node.name)
+        duplicates = {n: names for n, names in found.items() if len(names) > 1}
+        assert duplicates == {}, f"gate number reused by more than one gate: {duplicates}"
+        return {n: names[0] for n, names in found.items()}
+
+    def test_gate_numbers_are_unique(self):
+        self._numbered_gates()
+
+    def test_gate_numbers_are_contiguous_from_one(self):
+        numbers = sorted(self._numbered_gates())
+        assert numbers == list(range(1, len(numbers) + 1)), (
+            f"gate numbers must be contiguous from 1; got {numbers}"
+        )
+
+    def test_gate_numbers_follow_preflight_execution_order(self):
+        """The number IS the position in run_full_preflight(), not a free label."""
+        import inspect
+
+        from scripts import harness_gate
+
+        numbered = self._numbered_gates()
+        body = inspect.getsource(harness_gate.run_full_preflight)
+        called_order = [
+            name for name in
+            sorted(numbered.values(), key=lambda n: body.find(f"{n}()"))
+            if f"{name}()" in body
+        ]
+        expected = [numbered[n] for n in sorted(numbered)]
+        assert called_order == expected, (
+            "gate numbering disagrees with run_full_preflight() call order:\n"
+            f"  by number: {expected}\n"
+            f"  by call:   {called_order}"
+        )
+
+    def test_every_numbered_gate_runs_in_preflight(self):
+        """An unnumbered helper is fine; a numbered gate that never runs is not."""
+        import inspect
+
+        from scripts import harness_gate
+
+        body = inspect.getsource(harness_gate.run_full_preflight)
+        orphans = [name for name in self._numbered_gates().values() if f"{name}()" not in body]
+        assert orphans == [], f"numbered gates absent from run_full_preflight(): {orphans}"
+
+
+class TestImportShadowingGate:
+    """JNWB-002: a user project cloned inside the library checkout shadowed itself.
+
+    The editable install writes a .pth containing the repository root, so any top-level
+    package beside jnwb/ is importable ahead of a consumer's own package of the same
+    name -- silently, from any working directory. 88 of 190 importing files took the
+    wrong copy and disagreed on an anatomical label. No error was raised.
+    """
+
+    def test_clean_root_passes(self, tmp_path: Path):
+        from scripts.harness_gate import check_no_shadow_packages
+        (tmp_path / "jnwb").mkdir()
+        (tmp_path / "jnwb" / "__init__.py").write_text("", encoding="utf-8")
+        (tmp_path / "docs").mkdir()
+        assert check_no_shadow_packages(tmp_path) == []
+
+    def test_adversarial_probe_cloned_user_project_rejected(self, tmp_path: Path):
+        """The exact JNWB-002 shape: a consumer project cloned inside the library."""
+        from scripts.harness_gate import check_no_shadow_packages
+        (tmp_path / "jnwb").mkdir()
+        (tmp_path / "jnwb" / "__init__.py").write_text("", encoding="utf-8")
+        shadow = tmp_path / "omission"
+        shadow.mkdir()
+        (shadow / "__init__.py").write_text("", encoding="utf-8")
+        violations = check_no_shadow_packages(tmp_path)
+        assert len(violations) == 1, violations
+        assert "SHADOW_PACKAGE" in violations[0] and "omission" in violations[0]
+
+    def test_gitignored_shadow_is_still_rejected(self, tmp_path: Path):
+        """.gitignore hiding it from `git status` is the reason the gate exists."""
+        from scripts.harness_gate import check_no_shadow_packages
+        (tmp_path / "jnwb").mkdir()
+        (tmp_path / "jnwb" / "__init__.py").write_text("", encoding="utf-8")
+        (tmp_path / ".gitignore").write_text("shadowlib/\n", encoding="utf-8")
+        (tmp_path / "shadowlib").mkdir()
+        (tmp_path / "shadowlib" / "__init__.py").write_text("", encoding="utf-8")
+        assert any("shadowlib" in v for v in check_no_shadow_packages(tmp_path))
+
+    def test_non_package_directory_is_not_flagged(self, tmp_path: Path):
+        """A plain directory is harmless; only an __init__.py makes it importable."""
+        from scripts.harness_gate import check_no_shadow_packages
+        (tmp_path / "jnwb").mkdir()
+        (tmp_path / "jnwb" / "__init__.py").write_text("", encoding="utf-8")
+        (tmp_path / "artifacts").mkdir()
+        (tmp_path / "artifacts" / "notes.md").write_text("x\n", encoding="utf-8")
+        assert check_no_shadow_packages(tmp_path) == []
+
+    def test_internal_root_packages_are_excluded_from_the_wheel(self):
+        """scripts/ and tests/ are allowed at the root only because they never ship."""
+        import tomllib
+
+        from scripts.harness_gate import INTERNAL_ROOT_PACKAGES
+
+        config = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+        find = config["tool"]["setuptools"]["packages"]["find"]
+        include, exclude = find.get("include", []), find.get("exclude", [])
+        assert include == ["jnwb*"], f"only jnwb may be packaged; got {include}"
+        for name in INTERNAL_ROOT_PACKAGES:
+            assert any(pattern.startswith(name) for pattern in exclude), (
+                f"{name!r} is allowed at the repository root on the promise that it is "
+                f"excluded from the distribution, but pyproject excludes {exclude}"
+            )

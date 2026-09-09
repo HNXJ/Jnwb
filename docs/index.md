@@ -15,7 +15,7 @@ pip install -U jnwb
 pip install "jnwb[torch,gpu]"   # optional CuPy / PyTorch
 ```
 
-Python 3.12 only. See [Installation](install.md).
+Requires Python 3.12 or newer; CI tests 3.12 and 3.14. See [Installation](install.md).
 
 ## Example
 

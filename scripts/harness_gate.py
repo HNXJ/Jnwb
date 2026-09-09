@@ -43,7 +43,7 @@ class HarnessGateFailure(Exception):
 
 
 def check_frozen_boundary(jnwb_path: Optional[Path] = None) -> List[str]:
-    """Gate 1: Enforce that jnwb/ contains zero unauthorized project imports."""
+    """Gate 1 (Frozen Boundary): Enforce that jnwb/ contains zero unauthorized project imports."""
     target_dir = jnwb_path or JNWB_DIR
     violations = []
     
@@ -76,7 +76,10 @@ def check_frozen_boundary(jnwb_path: Optional[Path] = None) -> List[str]:
 
 
 def check_protected_paths(staged_or_modified_paths: List[str]) -> List[str]:
-    """Gate 2 (Global Repository Safety): Prevent accidental modification of protected concurrent paths."""
+    """Protected-path check (not a numbered preflight gate; argument-driven).
+
+    Prevent accidental modification of protected concurrent paths.
+    """
     violations = []
     for p in staged_or_modified_paths:
         p_norm = p.replace("\\", "/").strip()
@@ -87,7 +90,8 @@ def check_protected_paths(staged_or_modified_paths: List[str]) -> List[str]:
 
 
 def validate_receipt_provenance(claim_name: str, receipt_path: Union[str, Path]) -> Tuple[bool, str]:
-    """Gate 3 (Provenance / Existence Validation):
+    """Receipt provenance check (not a numbered preflight gate; argument-driven).
+
     
     Verifies that an empirical receipt exists on disk, is readable, and is non-empty.
     IMPORTANT EPISTEMIC DISTINCTION: Receipt existence is provenance/artifact validation,
@@ -108,7 +112,7 @@ def validate_receipt_provenance(claim_name: str, receipt_path: Union[str, Path])
 
 
 def check_skill_tree_uniqueness(repo_root: Optional[Path] = None) -> List[str]:
-    """Gate 2 (Global Repository Safety): Enforce single canonical skill tree.
+    """Gate 2 (Skill Tree Uniqueness): Enforce single canonical skill tree.
     
     Prohibits recreation of duplicate .agents/skills/ trees.
     The single tracked canonical skill tree is skills/.
@@ -157,6 +161,26 @@ def check_no_hardcoded_test_paths(repo_root: Optional[Path] = None) -> List[str]
     return violations
 
 
+# --- Import shadowing policy -----------------------------------------------
+# jnwb installs editable via a .pth that puts the REPOSITORY ROOT on sys.path, so every
+# top-level package sitting beside jnwb/ becomes importable for every editable user,
+# from any working directory. A user project cloned inside this checkout therefore
+# shadows itself (JNWB-002: 88 of 190 importing files silently loaded the wrong copy,
+# disagreeing on an anatomical label, with no error raised).
+# These two are jnwb's own, are excluded from the wheel, and are the residual hazard
+# documented in docs/install.md -- nothing else may join them.
+OWNED_ROOT_PACKAGES = {"jnwb"}
+INTERNAL_ROOT_PACKAGES = {"scripts", "tests"}
+
+# --- Python support policy -------------------------------------------------
+# Corrected 2026-09-09. The earlier "3.12 only" rule was a decision scoped to one
+# specific run that got generalized into repository-wide policy; it shipped an upper
+# pin in 0.1.1 and made that release uninstallable. Declared support is a floor with
+# no ceiling; CI tests the floor and the newest declared version.
+PYTHON_FLOOR = "3.12"
+PYTHON_SUPPORTED = ("3.12", "3.13", "3.14")   # what the classifiers must claim
+PYTHON_CI_REQUIRED = ("3.12", "3.14")         # floor and head; the matrix must cover both
+
 ALLOWED_ROOT_DIRS = {
     "jnwb", "tests", "examples", "docs", "skills", "scripts", "omission", "artifacts",
     ".git", ".github", ".venv", "venv", "env", ".pytest_cache", "dist", "build", "jnwb.egg-info",
@@ -169,7 +193,7 @@ ALLOWED_ROOT_FILES = {
 
 
 def check_root_allowlist(repo_root: Optional[Path] = None) -> List[str]:
-    """Gate 5 (Repository Hygiene): Enforce strict repository root freeze."""
+    """Gate 4 (Repository Hygiene): Enforce strict repository root freeze."""
     root = repo_root or REPO_ROOT
     violations = []
     for entry in root.iterdir():
@@ -183,7 +207,7 @@ def check_root_allowlist(repo_root: Optional[Path] = None) -> List[str]:
 
 
 def check_public_symbols_documented(repo_root: Optional[Path] = None) -> List[str]:
-    """Gate 6 (API Completeness): Assert all public exports are documented in docs/."""
+    """Gate 5 (API Completeness): Assert all public exports are documented in docs/."""
     root = repo_root or REPO_ROOT
     import jnwb
     docs_dir = root / "docs"
@@ -204,7 +228,7 @@ def check_public_symbols_documented(repo_root: Optional[Path] = None) -> List[st
 def check_documented_api_matches_all(repo_root: Optional[Path] = None) -> List[str]:
     """Gate 9 (API Set Equality): assert documented API == set(jnwb.__all__), both directions.
 
-    Gate 6 checks that every export is *mentioned* somewhere in docs/. That is necessary but
+    Gate 5 checks that every export is *mentioned* somewhere in docs/. That is necessary but
     weak: it cannot see a reference row left behind for a symbol that no longer exists, and it
     is satisfied by an incidental mention anywhere in any file. This gate pins the reference
     surface itself as a set.
@@ -355,7 +379,7 @@ def check_dataset_leakage(repo_root: Optional[Path] = None) -> List[str]:
 
 
 def check_version_consistency(repo_root: Optional[Path] = None) -> List[str]:
-    """Gate 8 (Release Consistency): Assert package version matches pyproject.toml and docs/conf.py."""
+    """Gate 7 (Release Consistency): Assert package version matches pyproject.toml and docs/conf.py."""
     root = repo_root or REPO_ROOT
     import jnwb
     version = getattr(jnwb, "__version__", None)
@@ -375,35 +399,138 @@ def check_version_consistency(repo_root: Optional[Path] = None) -> List[str]:
     return []
 
 
-def check_python_target_consistency(repo_root: Optional[Path] = None) -> List[str]:
-    """Gate 9 (Python 3.12 Target Consistency): Assert Python 3.12 is the sole targeted version across metadata and CI."""
+def check_python_floor_consistency(repo_root: Optional[Path] = None) -> List[str]:
+    """Gate 8 (Python Floor Consistency): declared support, classifiers and CI must agree.
+
+    The invariant is *agreement*, not a single version. Its predecessor
+    (`check_python_target_consistency`) asserted "3.12 is the sole targeted version",
+    which was an over-generalization of a decision scoped to one specific run. That
+    policy is what put `requires-python = ">=3.12, <3.13"` into 0.1.1 and made the
+    release uninstallable on every current interpreter, while pip silently resolved
+    users back to 0.1.0. The gate did not catch it because it was enforcing it.
+
+    What is checked here:
+
+    1. `requires-python` declares PYTHON_FLOOR with **no upper bound**. The wheel is
+       `py3-none-any` -- pure Python, no compiled extensions -- so no ABI reason for a
+       ceiling exists, and an upper pin locks users out of interpreters that work.
+    2. The classifier set equals PYTHON_SUPPORTED exactly, in both directions: nothing
+       below the floor, and nothing claimed that is not declared.
+    3. The CI matrix contains every version in PYTHON_CI_REQUIRED (the floor and the
+       newest declared version). It is no longer required to be a singleton.
+    4. `.readthedocs.yaml` pins one interpreter drawn from PYTHON_SUPPORTED. A docs
+       build needs one version, not a matrix -- it just may not drift outside the range.
+    """
     root = repo_root or REPO_ROOT
     violations = []
-    
-    # 1. pyproject.toml
+
+    # 1. pyproject.toml: floor, no ceiling, classifiers == PYTHON_SUPPORTED
     pyproject_path = root / "pyproject.toml"
     if pyproject_path.exists():
         pyproject_text = pyproject_path.read_text(encoding="utf-8")
-        if 'requires-python = ">=3.12, <3.13"' not in pyproject_text and 'requires-python = ">=3.12"' not in pyproject_text and 'requires-python = "==3.12.*"' not in pyproject_text:
-            violations.append("PYTHON_TARGET_INCONSISTENCY: pyproject.toml requires-python does not target Python 3.12")
-        for bad_v in ["3.10", "3.11", "3.13", "3.14"]:
-            if f'"Programming Language :: Python :: {bad_v}"' in pyproject_text:
-                violations.append(f"PYTHON_TARGET_INCONSISTENCY: pyproject.toml contains classifier for non-3.12 Python version: {bad_v}")
-                
-    # 2. .readthedocs.yaml
+
+        requires = re.search(r'requires-python\s*=\s*"([^"]*)"', pyproject_text)
+        if requires is None:
+            violations.append("PYTHON_FLOOR_INCONSISTENCY: pyproject.toml declares no requires-python")
+        else:
+            spec = requires.group(1)
+            if f">={PYTHON_FLOOR}" not in spec.replace(" ", ""):
+                violations.append(
+                    f"PYTHON_FLOOR_INCONSISTENCY: requires-python {spec!r} does not declare a "
+                    f">={PYTHON_FLOOR} floor"
+                )
+            if "<" in spec:
+                violations.append(
+                    f"PYTHON_UPPER_PIN: requires-python {spec!r} carries an upper bound. jnwb is a "
+                    "pure-Python py3-none-any wheel; an upper pin makes the release uninstallable "
+                    "on newer interpreters and silently resolves users to an older version. "
+                    "Add a ceiling only for a *named*, demonstrated incompatibility."
+                )
+
+        declared = {
+            m.group(1)
+            for m in re.finditer(
+                r'"Programming Language :: Python :: (\d+\.\d+)"', pyproject_text
+            )
+        }
+        for missing in sorted(set(PYTHON_SUPPORTED) - declared):
+            violations.append(
+                f"PYTHON_CLASSIFIER_MISSING: no classifier for supported Python {missing}"
+            )
+        for extra in sorted(declared - set(PYTHON_SUPPORTED)):
+            violations.append(
+                f"PYTHON_CLASSIFIER_UNSUPPORTED: classifier claims Python {extra}, which is not in "
+                f"the declared supported set {sorted(PYTHON_SUPPORTED)}"
+            )
+
+    # 2. .readthedocs.yaml: one interpreter, inside the supported range
     rtd_path = root / ".readthedocs.yaml"
     if rtd_path.exists():
         rtd_text = rtd_path.read_text(encoding="utf-8")
-        if 'python: "3.12"' not in rtd_text:
-            violations.append("PYTHON_TARGET_INCONSISTENCY: .readthedocs.yaml does not specify python: '3.12'")
-            
-    # 3. workflow.yml
+        pinned = re.search(r'python:\s*"(\d+\.\d+)"', rtd_text)
+        if pinned is None:
+            violations.append("PYTHON_FLOOR_INCONSISTENCY: .readthedocs.yaml pins no python version")
+        elif pinned.group(1) not in PYTHON_SUPPORTED:
+            violations.append(
+                f"PYTHON_FLOOR_INCONSISTENCY: .readthedocs.yaml pins Python {pinned.group(1)}, "
+                f"outside the supported set {sorted(PYTHON_SUPPORTED)}"
+            )
+
+    # 3. workflow.yml: the matrix must cover the floor and the newest declared version
     workflow_path = root / ".github" / "workflows" / "workflow.yml"
     if workflow_path.exists():
         wf_text = workflow_path.read_text(encoding="utf-8")
-        if 'python-version: [ "3.12" ]' not in wf_text and 'python-version: ["3.12"]' not in wf_text:
-            violations.append("PYTHON_TARGET_INCONSISTENCY: .github/workflows/workflow.yml test matrix is not restricted to Python 3.12")
-            
+        matrix = re.search(r"python-version:\s*\[([^\]]*)\]", wf_text)
+        if matrix is None:
+            violations.append("PYTHON_FLOOR_INCONSISTENCY: workflow.yml declares no python-version matrix")
+        else:
+            tested = set(re.findall(r'"(\d+\.\d+)"', matrix.group(1)))
+            for required in PYTHON_CI_REQUIRED:
+                if required not in tested:
+                    violations.append(
+                        f"PYTHON_CI_UNTESTED: workflow.yml test matrix {sorted(tested)} does not "
+                        f"include Python {required}"
+                    )
+            for untested in sorted(tested - set(PYTHON_SUPPORTED)):
+                violations.append(
+                    f"PYTHON_CI_UNSUPPORTED: workflow.yml tests Python {untested}, which is not in "
+                    f"the declared supported set {sorted(PYTHON_SUPPORTED)}"
+                )
+
+    return violations
+
+
+def check_no_shadow_packages(repo_root: Optional[Path] = None) -> List[str]:
+    """Gate 11 (Import Shadowing): no unowned importable package may sit at the repo root.
+
+    The editable install writes a .pth containing the repository root, so anything at
+    the root with an `__init__.py` is importable ahead of a consumer's own package of
+    the same name -- silently, from any working directory, with a well-formed module
+    object and no error. `.gitignore` hides such a directory from `git status`, which
+    removes the last signal a user would get.
+
+    This is not hypothetical: a stale clone of a *user project* inside this checkout
+    shadowed that project, and 88 of 190 importing files took the wrong copy.
+
+    The gate is deliberately stricter than the wheel. The built wheel already ships
+    only `jnwb/`; the exposure is editable installs, which is how every developer and
+    every analysis session actually runs.
+    """
+    root = repo_root or REPO_ROOT
+    allowed = OWNED_ROOT_PACKAGES | INTERNAL_ROOT_PACKAGES
+    violations = []
+    for entry in sorted(root.iterdir()):
+        if not entry.is_dir() or entry.name in allowed:
+            continue
+        if entry.name.startswith(".") or entry.name.endswith(".egg-info"):
+            continue
+        if (entry / "__init__.py").exists():
+            violations.append(
+                f"SHADOW_PACKAGE: '{entry.name}/' has an __init__.py at the repository root, so "
+                f"`import {entry.name}` resolves inside the jnwb checkout for every editable "
+                f"install, shadowing any consumer package of that name. Move it out of the "
+                f"library checkout."
+            )
     return violations
 
 
@@ -475,7 +602,9 @@ def check_logarithm_last_rule(code_or_tree: Union[str, ast.AST]) -> List[str]:
 
 
 def check_modality_isolation(feature_names: List[str]) -> Tuple[bool, List[str]]:
-    """Gate 4: Enforce signal class separation.
+    """Modality-isolation check (not a numbered preflight gate; argument-driven).
+
+    Enforce signal class separation.
     
     Disallows un-namespaced pooling of SPK and LFP without explicit modality tags.
     """
@@ -558,14 +687,17 @@ def run_full_preflight() -> bool:
         return False
     print("PASS: Package and pyproject.toml versions synchronized.")
 
-    # 8. Python 3.12 target consistency check
-    py_target_violations = check_python_target_consistency()
-    if py_target_violations:
-        print("FAIL: Python target inconsistency detected:")
-        for v in py_target_violations:
+    # 8. Python floor consistency: declared support, classifiers and CI agree
+    py_floor_violations = check_python_floor_consistency()
+    if py_floor_violations:
+        print("FAIL: Python support policy inconsistency detected:")
+        for v in py_floor_violations:
             print(f"  - {v}")
         return False
-    print("PASS: Python 3.12 sole supported target verified across metadata and CI.")
+    print(
+        f"PASS: Python >={PYTHON_FLOOR} floor, classifiers {list(PYTHON_SUPPORTED)}, "
+        f"CI covering {list(PYTHON_CI_REQUIRED)} all agree."
+    )
 
     # 9. Documented API set equality: docs/api.md == set(jnwb.__all__)
     api_set_violations = check_documented_api_matches_all()
@@ -584,6 +716,15 @@ def run_full_preflight() -> bool:
             print(f"  - {v}")
         return False
     print("PASS: Documentation versions derive from jnwb.__version__.")
+
+    # 11. Import shadowing: no unowned importable package at the repository root
+    shadow_violations = check_no_shadow_packages()
+    if shadow_violations:
+        print("FAIL: Import-shadowing package detected at repository root:")
+        for v in shadow_violations:
+            print(f"  - {v}")
+        return False
+    print("PASS: No unowned importable package at the repository root.")
 
     print("ALL HARNESS GATES PASSED.")
     return True
