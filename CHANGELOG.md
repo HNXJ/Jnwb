@@ -4,6 +4,99 @@ All notable changes to `jnwb` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.3] - 2026-09-09
+
+Fixes the blocker that made 0.1.1 uninstallable, corrects three defects in
+`cross_area_coherence`, renames a path constant that misled every consumer, and removes
+a class of silent GPU and import failures. 0.1.2 was never released.
+
+### Breaking
+
+- **`jnwb.paths.REPO_ROOT` is renamed `PACKAGE_ROOT`.** It resolves from `paths.py`'s own
+  location, so in a consuming project it named the *jnwb* checkout, not the caller's
+  repository, and the path was well-formed enough that nothing failed. One project had 41
+  live files building inputs and outputs from it. `REPO_ROOT` still resolves and warns;
+  it is removed in 0.2.0. `describe()` reports both keys for this release. To get your own
+  root, anchor to your own file.
+- **`cross_area_coherence` returns different p-values.** The surrogate draws changed, and
+  long signals now draw 50 surrogates instead of 10. Receipts quoting a p-value from this
+  function will not reproduce. Pass `n_surrogates=10` for the previous cost.
+- **`gpu_pca(device="cuda")` on a machine without CUDA** now computes in float64 NumPy
+  rather than float32 torch-on-CPU, and warns. Previously "cpu" meant two different
+  precisions depending on which device string you passed.
+- **An unrecognised `device` string raises `ValueError`** instead of falling through to
+  the CPU unannounced.
+
+### Fixed
+
+- **`requires-python` upper pin (JNWB-001).** 0.1.1 declared `>=3.12, <3.13`, so
+  `pip install jnwb==0.1.1` failed on every current interpreter and silently resolved
+  users to 0.1.0 -- older code than they asked for. jnwb is a pure-Python `py3-none-any`
+  wheel with no ABI reason for a ceiling. Declared support is now `>=3.12` with no upper
+  bound, classifiers cover 3.12/3.13/3.14, and CI tests the floor and the newest declared
+  version.
+- **`cross_area_coherence` surrogate null was unseedable (JNWB-003).** The generator was a
+  hardcoded `default_rng(42)` with no parameter, so every caller received the same 50
+  surrogates and no seed could be recorded. Adds `rng=`, and returns
+  `surrogate_seed_entropy` (`None` when the caller supplied the generator).
+- **`cross_area_coherence` could mix estimators inside one null (JNWB-004).** The GPU path
+  sat inside the surrogate loop behind a per-iteration `except Exception`, so an
+  intermittent failure produced a null assembled from two estimators with nothing logged.
+  The device is resolved once; a failure discards partial work and recomputes the observed
+  value and the whole null on CPU. The result reports `device_used`.
+- **Surrogate count depended on input length (JNWB-005).** `n_surr` dropped from 50 to 10
+  above 50,000 samples, making the smallest attainable p-value 1/11 = 0.0909 rather than
+  1/51 = 0.0196. At 1 kHz that is 50 s of data, so a caller testing at alpha = 0.05 could
+  not reject on a long recording and the return value said nothing. Adds `n_surrogates`
+  and returns `n_surrogates_used` and `p_value_floor`.
+- **Docstring named the wrong surrogate (JNWB-006).** A circular shift was described as
+  phase randomization. Those are different null hypotheses.
+- **`jnwb.paths.get_path()` was documented but never existed.** The example now calls
+  `nwb_dir()`.
+
+### Added
+
+- **`n_jobs` on `cluster_permutation_test` and `cross_area_coherence`.** Results are
+  identical for any `n_jobs`: each iteration is seeded from the caller's generator before
+  the loop starts, so worker count cannot change a number. Default is 1 everywhere except
+  `jrsa`, which keeps `-1`. Work is dispatched in chunks -- one task per iteration measured
+  0.03x, i.e. slower than serial, because process startup dwarfed a 1 ms permutation.
+  Chunked: 4.51x on 2000 permutations, 3.08x on 1000 surrogates.
+- **Import-shadowing gate.** The editable install writes a `.pth` holding the repository
+  root, so any top-level package beside `jnwb/` is importable ahead of a consumer's own
+  package of that name, from any working directory (JNWB-002: 88 of 190 importing files in
+  one project loaded the wrong copy, disagreeing on an anatomical label, with no error).
+  A gate now rejects unowned root packages, and `docs/install.md` documents the hazard and
+  the `editable_mode=strict` install.
+- **Agent definitions are tracked.** `.claude/agents/` was gitignored, so a fresh clone got
+  none of them.
+- **New logo** in the README, docs site, and favicon.
+
+### Changed
+
+- **Gate numbering is canonical.** "Gate 9" named two different gates, and "Gate 2",
+  "Gate 3" and "Gate 6" were each used twice, so a gate report citing a number was
+  ambiguous. Numbers are now the position in `run_full_preflight()`, checked by a test.
+- **`check_python_target_consistency` is now `check_python_floor_consistency`.** The old
+  gate asserted "3.12 is the sole targeted version" -- the policy that produced JNWB-001 --
+  and accepted the upper pin that broke the release. It now asserts that declared support,
+  classifiers and CI agree, and rejects any upper bound.
+- **One GPU probe.** Fifteen call sites across seven modules each carried their own, some
+  treating a bare `import cupy` as proof of a device. CuPy imports fine with no driver, so
+  those sites disagreed about the same machine. `jnwb/_backend.py` decides once, and warns
+  whenever a requested accelerator cannot be delivered.
+- **Sphinx removed.** It built the same markdown a second way and was never published;
+  Read the Docs builds mkdocs. `mkdocs build --strict` remains the gate. Removes
+  `docs/conf.py`, `docs/_static/`, and three documentation dependencies.
+- **One `AGENTS.md`.** The root file and `artifacts/AGENTS.md` were near-duplicates that
+  had drifted apart. The root file is jnwb-scoped and carries a tool inventory.
+- **Skill counts removed.** `skills/jnwb/SKILL.md` claimed 101 exports against a live 111
+  and 446+ tests against 527, and advertised `n_jobs` on functions that lacked it. Counts
+  are replaced by the commands that check them, enforced by a test.
+- **Thinner repository root.** The root allowlist is split into tracked-source and
+  ephemeral directories, and no longer permits `omission` -- the one entry that
+  contradicted the import-shadowing gate.
+
 ## [0.1.1] - 2026-09-07
 
 ### Added

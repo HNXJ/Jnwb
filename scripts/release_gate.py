@@ -94,17 +94,17 @@ def main() -> None:
 
         if sys.platform == "win32":
             venv_python = str(venv_dir / "Scripts" / "python.exe")
-            venv_pip = str(venv_dir / "Scripts" / "pip.exe")
         else:
             venv_python = str(venv_dir / "bin" / "python")
-            venv_pip = str(venv_dir / "bin" / "pip")
 
         log.info(f"Installing wheel {whl} into isolated environment...")
-        subprocess.run([venv_pip, "install", "--upgrade", "pip"], check=True)
-        subprocess.run([venv_pip, "install", str(whl)], check=True)
+        # `python -m pip`, not the pip executable: on Windows pip refuses to replace its
+        # own running .exe and exits 1, which failed this gate before it tested anything.
+        subprocess.run([venv_python, "-m", "pip", "install", "--upgrade", "pip"], check=True)
+        subprocess.run([venv_python, "-m", "pip", "install", str(whl)], check=True)
 
         log.info("Checking package dependencies with pip check...")
-        check_res = subprocess.run([venv_pip, "check"], capture_output=True, text=True)
+        check_res = subprocess.run([venv_python, "-m", "pip", "check"], capture_output=True, text=True)
         if check_res.returncode != 0:
             log.error(f"pip check failed: {check_res.stderr}\n{check_res.stdout}")
             sys.exit(check_res.returncode)
