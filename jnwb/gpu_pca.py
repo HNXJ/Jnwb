@@ -9,6 +9,8 @@ import logging
 from typing import Tuple, Dict, Any
 import numpy as np
 
+from ._backend import CUDA, resolve_device, warn_device_fallback
+
 log = logging.getLogger(__name__)
 
 
@@ -50,30 +52,38 @@ def gpu_pca(
 
     actual_components = min(n_components, n_samples, n_features)
 
-    if device == "cuda":
+    def _svd_numpy():
+        U, S, Vt = np.linalg.svd(scaled, full_matrices=False)
+        V_top = Vt[:actual_components, :]
+        return scaled @ V_top.T, V_top, S
+
+    # Resolved once, before any arithmetic. Note the default is device="cuda", so on a
+    # CPU-only machine this warns -- deliberately: a function named gpu_pca that quietly
+    # returns CPU results is exactly the silence this consolidation exists to remove.
+    resolved = resolve_device(device, context="gpu_pca", prefer="torch", stacklevel=3)
+
+    if resolved == CUDA:
         try:
             import torch
-            use_gpu = torch.cuda.is_available()
-            target_device = "cuda" if use_gpu else "cpu"
-            tensor = torch.tensor(scaled, dtype=torch.float32, device=target_device)
+
+            tensor = torch.tensor(scaled, dtype=torch.float32, device="cuda")
             U, S, V = torch.linalg.svd(tensor, full_matrices=False)
             V_top = V[:actual_components, :]
             proj = tensor @ V_top.t()
 
-            proj_np = proj.cpu().numpy() if use_gpu else proj.numpy()
-            S_np = S.cpu().numpy() if use_gpu else S.numpy()
-            V_np = V_top.cpu().numpy() if use_gpu else V_top.numpy()
+            proj_np = proj.cpu().numpy()
+            S_np = S.cpu().numpy()
+            V_np = V_top.cpu().numpy()
         except Exception as e:
+            # Wholesale, not partial: discard the GPU attempt entirely and redo it.
+            warn_device_fallback("gpu_pca", e, stacklevel=3)
             log.warning(f"PyTorch SVD failed: {e}. Falling back to NumPy SVD.")
-            U, S, Vt = np.linalg.svd(scaled, full_matrices=False)
-            V_np = Vt[:actual_components, :]
-            proj_np = scaled @ V_np.T
-            S_np = S
+            proj_np, V_np, S_np = _svd_numpy()
     else:
-        U, S, Vt = np.linalg.svd(scaled, full_matrices=False)
-        V_np = Vt[:actual_components, :]
-        proj_np = scaled @ V_np.T
-        S_np = S
+        # Previously the cuda branch fell back to torch-on-CPU in float32 while this
+        # branch used float64 NumPy, so "cpu" meant two different precisions depending
+        # on which device string was passed. One CPU path now, in float64.
+        proj_np, V_np, S_np = _svd_numpy()
 
     total_var = np.sum(S_np ** 2)
     explained_variance_ratio = (

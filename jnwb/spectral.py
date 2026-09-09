@@ -31,6 +31,8 @@ import numpy as np
 from scipy import signal, stats
 import pandas as pd
 
+from ._backend import CUDA, resolve_device, warn_device_fallback
+
 log = logging.getLogger(__name__)
 
 #: Settled band edges (Hz) -- standard neuroscience convention, not omission-specific.
@@ -316,12 +318,11 @@ def cross_area_coherence(
     Coherence quantifies phase synchronization between areas across frequencies.
     High coherence = strong coupling; low coherence = weak coupling.
 
-    The per-band significance test compares the observed band-mean coherence against
-    a null built by **circularly shifting** ``lfp_area2`` by a random offset. A
-    circular shift preserves each signal's autocorrelation and amplitude spectrum and
-    destroys only the *relative* alignment of the two series, which is the quantity
-    under test. It is not phase randomization -- the two have different null
-    hypotheses -- and this function does not phase-randomize.
+    The per-band significance test compares the observed band-mean coherence against a
+    null built by **circularly shifting** ``lfp_area2`` by a random offset. The shift
+    preserves each signal's autocorrelation and amplitude spectrum and destroys only the
+    *relative* alignment of the two series, which is the quantity under test. Earlier
+    docs called this phase randomization; that is a different null hypothesis.
 
     Args:
         lfp_area1: Time series from area 1
@@ -335,13 +336,12 @@ def cross_area_coherence(
                 any coherence is computed; see `device_used` in the returned dict.
         rng: Generator for the surrogate shifts. Defaults to
              ``np.random.default_rng(42)``, matching the convention in
-             `jnwb.statistics`. Previously the generator was hardcoded and
-             unreachable, so every caller got the same 50 surrogates forever and no
-             seed could be recorded in a receipt.
+             `jnwb.statistics`. Previously hardcoded and unreachable, so every caller
+             got the same 50 surrogates and no seed could be recorded.
         n_surrogates: Number of circular-shift surrogates per band (default 50).
                       Sets the resolution of the test: with the (count + 1) / (n + 1)
                       estimator the smallest attainable p-value is
-                      ``1 / (n_surrogates + 1)`` -- 1/51 = 0.0196 at the default. To
+                      ``1 / (n_surrogates + 1)``, so 1/51 = 0.0196 at the default. To
                       reject at a smaller alpha, raise this; the cost is linear.
 
     Returns:
@@ -351,16 +351,16 @@ def cross_area_coherence(
         - band_coherence: {band_name: mean_coherence, ...}
         - band_significance: {band_name: p_value, ...}. Every band is tested against
           the SAME set of surrogate signals, so these p-values are dependent by
-          construction. That is what licenses a max-statistic or cluster correction
-          across bands; it does not license a correction that assumes independence.
+          construction. Use a max-statistic or cluster correction across bands; a
+          correction assuming independence is invalid here.
         - peak_coherence_freq: Frequency with highest coherence (Hz)
         - peak_coherence_value: Coherence at that frequency
         - device_used: 'cpu' or 'cuda' -- the estimator that produced *every* value
           here, observed and surrogate alike
         - n_surrogates_used: Surrogates actually drawn per band
         - p_value_floor: Smallest p-value this call could return,
-          1 / (n_surrogates_used + 1). A p-value equal to the floor means "not
-          resolvable with this many surrogates", not "this is the true p".
+          1 / (n_surrogates_used + 1). A p-value at the floor means "not resolvable
+          with this many surrogates".
         - surrogate_seed_entropy: Entropy of the default generator, or None when the
           caller supplied `rng` (record your own seed in that case).
 
@@ -385,13 +385,13 @@ def cross_area_coherence(
     if n_surrogates < 1:
         raise ValueError(f"n_surrogates must be >= 1, got {n_surrogates}")
 
-    # INTENTIONAL BREAK (0.1.3). This function used to silently drop the surrogate
-    # count from 50 to 10 whenever len(lfp) > 50000, which made the p-value floor a
-    # function of input length: 1/51 = 0.0196 for short signals but 1/11 = 0.0909 for
-    # long ones. At 1 kHz that threshold is 50 s of data, so a caller testing at
-    # alpha = 0.05 could not reject on a long recording -- and nothing in the return
-    # value said so. The count is now whatever the caller asks for, uniformly, and the
-    # floor it implies is reported. Pass n_surrogates=10 to restore the old cost.
+    # INTENTIONAL BREAK (0.1.3). This function used to drop the surrogate count from 50
+    # to 10 whenever len(lfp) > 50000, making the p-value floor a function of input
+    # length: 1/51 = 0.0196 for short signals, 1/11 = 0.0909 for long ones. At 1 kHz
+    # that threshold is 50 s of data, so a caller testing at alpha = 0.05 could not
+    # reject on a long recording, and the return value said nothing. The count is now
+    # uniform and the floor it implies is reported. Pass n_surrogates=10 for the old
+    # cost.
     seed_entropy = None
     if rng is None:
         seed_sequence = np.random.SeedSequence(42)
@@ -431,11 +431,10 @@ def cross_area_coherence(
     def _compute_all(estimator) -> Dict:
         """Observed statistic and the entire null, from ONE estimator.
 
-        Everything a caller compares must come from the same estimator. The CPU and
-        GPU paths are not numerically interchangeable: scipy detrends each segment and
-        uses a periodic Hann window, while `_welch_csd_gpu` does neither (symmetric
-        `hanning`, no detrend). Both bias coherence, which is the quantity under test,
-        so a null assembled from a mixture is not a null for the observed value.
+        The CPU and GPU paths differ: scipy detrends each segment and uses a periodic
+        Hann window, while `_welch_csd_gpu` uses a symmetric `hanning` and no detrend.
+        Both bias coherence, the quantity under test, so a null assembled from a
+        mixture belongs to neither estimator.
         """
         out = {'band_coherence': {}, 'band_significance': {}}
         frequencies, coherency = estimator(lfp_area1, lfp_area2)
@@ -455,18 +454,15 @@ def cross_area_coherence(
 
         # One surrogate spectrum per shift, computed once and reused across bands.
         #
-        # This deliberately preserves the null's cross-band dependence structure, and
-        # does NOT change it. The old code constructed the generator inside the band
-        # loop, so every band drew the identical shift sequence -- meaning the
-        # surrogate *signals* were already shared across bands. It simply recomputed
-        # the full spectrum from scratch for each band, costing n_surrogates x n_bands
-        # estimator calls to obtain n_surrogates distinct spectra.
+        # This preserves the null's cross-band dependence structure. The old code built
+        # the generator inside the band loop, so every band drew the identical shift
+        # sequence and the surrogate *signals* were already shared; it just recomputed
+        # each spectrum from scratch per band, spending n_surrogates x n_bands estimator
+        # calls on n_surrogates distinct spectra.
         #
-        # Sharing surrogates across bands is the right default: it is what makes a
-        # max-statistic or cluster correction across bands valid. The consequence is
-        # that the per-band p-values are DEPENDENT by construction -- correct, but it
-        # must be stated, because a Bonferroni or count-of-significant-bands that
-        # assumes independence is not licensed by these numbers.
+        # Sharing surrogates across bands is what makes a max-statistic or cluster
+        # correction valid. The per-band p-values are therefore dependent, which the
+        # docstring states, since a Bonferroni over them would be invalid.
         surrogate_spectra = [estimator(lfp_area1, np.roll(lfp_area2, int(shift)))[1]
                              for shift in shifts]
 
@@ -487,24 +483,17 @@ def cross_area_coherence(
         return out
 
     # Resolve the device ONCE. The GPU path used to be attempted inside the surrogate
-    # loop with a per-iteration `except Exception` fallback to CPU, so an intermittent
-    # failure (OOM under memory pressure being the obvious case) silently produced a
-    # null that was a MIXTURE of two estimators, with nothing logged and nothing in the
-    # result. Here a GPU failure discards the partial work and recomputes everything --
-    # observed value included -- on the CPU, so the returned values always share one
-    # estimator, named in `device_used`.
-    device_used = 'cuda' if device == 'cuda' else 'cpu'
-    if device_used == 'cuda':
+    # loop behind a per-iteration `except Exception`, so an intermittent failure (OOM
+    # under memory pressure) silently produced a null mixing two estimators, with
+    # nothing logged and nothing in the result. A GPU failure now discards the partial
+    # work and recomputes everything, observed value included, on the CPU, so the
+    # returned values share one estimator, named in `device_used`.
+    device_used = resolve_device(device, context='cross_area_coherence', prefer='cupy')
+    if device_used == CUDA:
         try:
             computed = _compute_all(_coherence_gpu)
         except Exception as exc:
-            warnings.warn(
-                f"cross_area_coherence: GPU coherence failed ({exc}); recomputing the "
-                f"observed value and the entire surrogate null on CPU. Results are "
-                f"self-consistent but not comparable to a GPU run.",
-                RuntimeWarning,
-                stacklevel=2,
-            )
+            warn_device_fallback('cross_area_coherence', exc)
             log.warning("GPU coherence failed: %s. Falling back to CPU wholesale.", exc)
             device_used = 'cpu'
             computed = _compute_all(_coherence_cpu)

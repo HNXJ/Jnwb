@@ -47,6 +47,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
+from ._backend import CUDA, resolve_device, warn_device_fallback
 from scipy import stats
 
 log = logging.getLogger(__name__)
@@ -200,7 +201,7 @@ def fit_var_bivariate(
     Residual variances use RSS / (N - p) with p = number of regressors.
     Optional ``ridge`` shrinks non-intercept coefficients (CPU path).
     """
-    if device == "cuda" and ridge <= 0:
+    if resolve_device(device, context="fit_var_bivariate", prefer="cupy") == CUDA and ridge <= 0:
         try:
             import cupy as cp
 
@@ -247,6 +248,7 @@ def fit_var_bivariate(
                 )
             return var_restricted, var_unrestricted
         except Exception as e:
+            warn_device_fallback("fit_var_bivariate", e)
             log.warning(f"CUDA VAR fitting failed: {e}. Falling back to CPU.")
 
     # CPU implementation

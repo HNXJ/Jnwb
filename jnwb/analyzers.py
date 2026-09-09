@@ -13,6 +13,7 @@ Changes vs. previous version:
 import logging
 from typing import Optional, Dict, List, Tuple
 import numpy as np
+from ._backend import CUDA, resolve_device, torch_cuda_available, warn_device_fallback
 import pandas as pd
 from scipy import signal, stats
 import matplotlib.pyplot as plt
@@ -418,7 +419,7 @@ class UnitAnalyzer:
         n_bins    = int(max_lag / bin_size)
         bin_edges = np.linspace(-max_lag, max_lag, 2 * n_bins + 2)
 
-        if device == 'cuda':
+        if resolve_device(device, context='UnitAnalyzer.acg', prefer='cupy') == CUDA:
             try:
                 import cupy as cp
                 st = cp.sort(cp.asarray(spike_times))
@@ -450,6 +451,7 @@ class UnitAnalyzer:
                 lag_times = np.linspace(0, max_lag, n_bins + 1)[:-1]
                 return acg[centre+1:], lag_times
             except Exception as e:
+                warn_device_fallback("UnitAnalyzer.acg", e)
                 log.warning(f"CUDA ACG calculation failed: {e}. Falling back to CPU.")
 
         acg       = np.zeros(2 * n_bins + 1, dtype=np.int64)
@@ -689,7 +691,7 @@ class PopulationAnalyzer:
         X_centered = X - X_mean
         n_samples = X.shape[0]
 
-        if device == 'cuda':
+        if resolve_device(device, context='population_trajectory', prefer='cupy') == CUDA:
             try:
                 import cupy as cp
                 X_gpu = cp.asarray(X_centered)
@@ -714,7 +716,7 @@ class PopulationAnalyzer:
                 log.warning(f"GPU trajectory SVD via cupy failed: {e}. Trying PyTorch...")
                 try:
                     import torch
-                    if torch.cuda.is_available():
+                    if torch_cuda_available():
                         X_gpu = torch.tensor(X_centered, dtype=torch.float32, device='cuda')
                         u, s, v = torch.linalg.svd(X_gpu, full_matrices=False)
                         
@@ -734,6 +736,7 @@ class PopulationAnalyzer:
                             'explained_variance_ratio': explained_variance_ratio[:n_components]
                         }
                 except Exception as e2:
+                    warn_device_fallback("population_trajectory", e2)
                     log.warning(f"GPU trajectory SVD via PyTorch failed: {e2}. Falling back to CPU SVD.")
 
         u, s, vt = np.linalg.svd(X_centered, full_matrices=False)

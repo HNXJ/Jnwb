@@ -1,8 +1,8 @@
-# Common Mistakes & Methodological Traps
+# Common Mistakes
 
-A field guide to common numerical, statistical, and architectural failure modes in high-density electrophysiology and neural time-series analysis, and how `jnwb` prevents them.
+A guide for failure modes in neuronal data analysis, and how `jnwb` prevents them.
 
-Every item here corresponds to a real, verified defect or hazard identified during the development and adversarial auditing of `jnwb`.
+Every item corresponds to a real issue identified during the auditing of `jnwb`.
 
 ---
 

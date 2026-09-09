@@ -560,13 +560,17 @@ class TestCrossAreaCoherenceSurrogateContract:
         out = cross_area_coherence(x, y, fs=1000.0, device='cpu')
         assert out['device_used'] == 'cpu'
 
-    def test_cuda_request_without_cupy_falls_back_wholesale_and_warns(self, monkeypatch):
+    def test_cuda_failure_falls_back_wholesale_and_warns(self, monkeypatch):
         """A GPU failure must not yield a null that mixes two estimators."""
+        import jnwb._backend as backend
         import jnwb.spectral as spectral_module
 
         def always_fails(*args, **kwargs):
             raise RuntimeError("simulated GPU out-of-memory")
 
+        # Claim a GPU so the cuda branch is entered on machines without one, then fail
+        # inside it -- the mid-computation failure this fallback exists for.
+        monkeypatch.setattr(backend, "gpu_available", lambda prefer=None: True)
         monkeypatch.setattr(spectral_module, "_welch_csd_gpu", always_fails)
         x, y = self._signals()
         with pytest.warns(RuntimeWarning, match="recomputing"):
@@ -580,9 +584,12 @@ class TestCrossAreaCoherenceSurrogateContract:
 
     def test_docstring_names_the_surrogate_it_actually_implements(self):
         """JNWB-006: it called a circular shift 'phase-randomized'."""
-        doc = cross_area_coherence.__doc__
-        assert "circularly shift" in doc.lower() or "circular shift" in doc.lower()
-        assert "not phase randomization" in doc.lower()
+        doc = " ".join(cross_area_coherence.__doc__.lower().split())
+        assert "circularly shifting" in doc or "circular shift" in doc
+        assert "different null hypothesis" in doc, (
+            "the docstring must say the old 'phase randomization' wording named a "
+            "different null, since callers may have relied on it"
+        )
 
     def test_band_dependence_is_documented_not_hidden(self):
         """Sharing surrogates across bands is correct, but must be stated."""
