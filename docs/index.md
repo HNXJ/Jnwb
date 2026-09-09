@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/jnwb-logo.png" alt="jnwb" width="180">
+</p>
+
 # jnwb
 
 **Version {{ jnwb_version }}**
