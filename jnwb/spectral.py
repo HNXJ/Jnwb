@@ -25,6 +25,7 @@ Date: 2026-06-25
 """
 
 import logging
+import warnings
 from typing import Dict, Optional, Tuple, Union
 import numpy as np
 from scipy import signal, stats
@@ -305,13 +306,22 @@ def cross_area_coherence(
     fs: Optional[float] = None,
     sampling_rate: Optional[float] = None,
     freq_bands: Optional[Dict[str, Tuple[float, float]]] = None,
-    device: str = 'cpu'
+    device: str = 'cpu',
+    rng: Optional[np.random.Generator] = None,
+    n_surrogates: int = 50,
 ) -> Dict:
     """
     Compute frequency-resolved coherence between two LFP signals.
 
     Coherence quantifies phase synchronization between areas across frequencies.
     High coherence = strong coupling; low coherence = weak coupling.
+
+    The per-band significance test compares the observed band-mean coherence against
+    a null built by **circularly shifting** ``lfp_area2`` by a random offset. A
+    circular shift preserves each signal's autocorrelation and amplitude spectrum and
+    destroys only the *relative* alignment of the two series, which is the quantity
+    under test. It is not phase randomization -- the two have different null
+    hypotheses -- and this function does not phase-randomize.
 
     Args:
         lfp_area1: Time series from area 1
@@ -321,19 +331,43 @@ def cross_area_coherence(
         freq_bands: Dict of {'band_name': (freq_min, freq_max)}
                    Default: CANONICAL_BANDS (theta 4-8, alpha 8-14, beta 14-30,
                    low_gamma 30-50, high_gamma 50-80).
-        device: 'cpu' or 'cuda' (GPU acceleration via CuPy)
+        device: 'cpu' or 'cuda' (GPU acceleration via CuPy). Resolved **once**, before
+                any coherence is computed; see `device_used` in the returned dict.
+        rng: Generator for the surrogate shifts. Defaults to
+             ``np.random.default_rng(42)``, matching the convention in
+             `jnwb.statistics`. Previously the generator was hardcoded and
+             unreachable, so every caller got the same 50 surrogates forever and no
+             seed could be recorded in a receipt.
+        n_surrogates: Number of circular-shift surrogates per band (default 50).
+                      Sets the resolution of the test: with the (count + 1) / (n + 1)
+                      estimator the smallest attainable p-value is
+                      ``1 / (n_surrogates + 1)`` -- 1/51 = 0.0196 at the default. To
+                      reject at a smaller alpha, raise this; the cost is linear.
 
     Returns:
         Dict with:
         - coherence_spectrum: Coherence at each frequency
         - frequencies: Frequency bins
         - band_coherence: {band_name: mean_coherence, ...}
-        - band_significance: {band_name: p_value, ...}
+        - band_significance: {band_name: p_value, ...}. Every band is tested against
+          the SAME set of surrogate signals, so these p-values are dependent by
+          construction. That is what licenses a max-statistic or cluster correction
+          across bands; it does not license a correction that assumes independence.
         - peak_coherence_freq: Frequency with highest coherence (Hz)
+        - peak_coherence_value: Coherence at that frequency
+        - device_used: 'cpu' or 'cuda' -- the estimator that produced *every* value
+          here, observed and surrogate alike
+        - n_surrogates_used: Surrogates actually drawn per band
+        - p_value_floor: Smallest p-value this call could return,
+          1 / (n_surrogates_used + 1). A p-value equal to the floor means "not
+          resolvable with this many surrogates", not "this is the true p".
+        - surrogate_seed_entropy: Entropy of the default generator, or None when the
+          caller supplied `rng` (record your own seed in that case).
 
     Example:
         >>> coh = cross_area_coherence(v1_lfp, pfc_lfp, fs=1000.0)
         >>> print(f"Alpha coherence: {coh['band_coherence']['alpha']:.3f}")
+        >>> print(f"p >= {coh['p_value_floor']:.4f} by construction")
     """
     fs = _resolve_fs(fs, sampling_rate, "cross_area_coherence")
     if freq_bands is None:
@@ -348,6 +382,22 @@ def cross_area_coherence(
         # defines its edges. Pass freq_bands= explicitly to reproduce old output.
         freq_bands = dict(CANONICAL_BANDS)
 
+    if n_surrogates < 1:
+        raise ValueError(f"n_surrogates must be >= 1, got {n_surrogates}")
+
+    # INTENTIONAL BREAK (0.1.3). This function used to silently drop the surrogate
+    # count from 50 to 10 whenever len(lfp) > 50000, which made the p-value floor a
+    # function of input length: 1/51 = 0.0196 for short signals but 1/11 = 0.0909 for
+    # long ones. At 1 kHz that threshold is 50 s of data, so a caller testing at
+    # alpha = 0.05 could not reject on a long recording -- and nothing in the return
+    # value said so. The count is now whatever the caller asks for, uniformly, and the
+    # floor it implies is reported. Pass n_surrogates=10 to restore the old cost.
+    seed_entropy = None
+    if rng is None:
+        seed_sequence = np.random.SeedSequence(42)
+        seed_entropy = int(seed_sequence.entropy)
+        rng = np.random.default_rng(seed_sequence)
+
     result = {
         'coherence_spectrum': np.array([]),
         'frequencies': np.array([]),
@@ -355,91 +405,114 @@ def cross_area_coherence(
         'band_significance': {},
         'peak_coherence_freq': 0.0,
         'peak_coherence_value': 0.0,
+        'device_used': 'cpu',
+        'n_surrogates_used': int(n_surrogates),
+        'p_value_floor': 1.0 / (int(n_surrogates) + 1),
+        'surrogate_seed_entropy': seed_entropy,
     }
 
     if len(lfp_area1) != len(lfp_area2):
         log.warning("LFP traces have different lengths")
         return result
 
-    # Compute coherence
-    if device == 'cuda':
-        try:
-            frequencies, psd_x, psd_y, csd_xy = _welch_csd_gpu(
-                lfp_area1, lfp_area2, fs, min(len(lfp_area1), 4096)
-            )
-            # Avoid division by zero
-            denom = psd_x * psd_y
-            coherency = np.zeros_like(csd_xy, dtype=float)
-            mask = denom > 0
-            coherency[mask] = np.abs(csd_xy[mask]) ** 2 / denom[mask]
-        except Exception as e:
-            log.warning(f"GPU coherence failed: {e}. Falling back to CPU.")
-            frequencies, coherency = signal.coherence(
-                lfp_area1,
-                lfp_area2,
-                fs=fs,
-                nperseg=min(len(lfp_area1), 4096),
-                noverlap=None
-            )
-    else:
-        frequencies, coherency = signal.coherence(
-            lfp_area1,
-            lfp_area2,
-            fs=fs,
-            nperseg=min(len(lfp_area1), 4096),
-            noverlap=None
+    nperseg = min(len(lfp_area1), 4096)
+
+    def _coherence_cpu(x: np.ndarray, y: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+        return signal.coherence(x, y, fs=fs, nperseg=nperseg, noverlap=None)
+
+    def _coherence_gpu(x: np.ndarray, y: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+        frequencies, psd_x, psd_y, csd_xy = _welch_csd_gpu(x, y, fs, nperseg)
+        denom = psd_x * psd_y
+        coherency = np.zeros_like(csd_xy, dtype=float)
+        nonzero = denom > 0
+        coherency[nonzero] = np.abs(csd_xy[nonzero]) ** 2 / denom[nonzero]
+        return frequencies, coherency
+
+    def _compute_all(estimator) -> Dict:
+        """Observed statistic and the entire null, from ONE estimator.
+
+        Everything a caller compares must come from the same estimator. The CPU and
+        GPU paths are not numerically interchangeable: scipy detrends each segment and
+        uses a periodic Hann window, while `_welch_csd_gpu` does neither (symmetric
+        `hanning`, no detrend). Both bias coherence, which is the quantity under test,
+        so a null assembled from a mixture is not a null for the observed value.
+        """
+        out = {'band_coherence': {}, 'band_significance': {}}
+        frequencies, coherency = estimator(lfp_area1, lfp_area2)
+        out['frequencies'] = frequencies
+        out['coherence_spectrum'] = coherency
+
+        peak_idx = int(np.argmax(coherency))
+        out['peak_coherence_freq'] = float(frequencies[peak_idx])
+        out['peak_coherence_value'] = float(coherency[peak_idx])
+
+        low_val, high_val = 1, len(lfp_area2) - 1
+        shifts = (
+            rng.integers(low_val, high_val, size=int(n_surrogates))
+            if low_val < high_val
+            else np.zeros(int(n_surrogates), dtype=int)
         )
 
-    result['frequencies'] = frequencies
-    result['coherence_spectrum'] = coherency
+        # One surrogate spectrum per shift, computed once and reused across bands.
+        #
+        # This deliberately preserves the null's cross-band dependence structure, and
+        # does NOT change it. The old code constructed the generator inside the band
+        # loop, so every band drew the identical shift sequence -- meaning the
+        # surrogate *signals* were already shared across bands. It simply recomputed
+        # the full spectrum from scratch for each band, costing n_surrogates x n_bands
+        # estimator calls to obtain n_surrogates distinct spectra.
+        #
+        # Sharing surrogates across bands is the right default: it is what makes a
+        # max-statistic or cluster correction across bands valid. The consequence is
+        # that the per-band p-values are DEPENDENT by construction -- correct, but it
+        # must be stated, because a Bonferroni or count-of-significant-bands that
+        # assumes independence is not licensed by these numbers.
+        surrogate_spectra = [estimator(lfp_area1, np.roll(lfp_area2, int(shift)))[1]
+                             for shift in shifts]
 
-    # Peak coherence
-    peak_idx = np.argmax(coherency)
-    result['peak_coherence_freq'] = float(frequencies[peak_idx])
-    result['peak_coherence_value'] = float(coherency[peak_idx])
+        for band_name, (fmin, fmax) in freq_bands.items():
+            mask = (frequencies >= fmin) & (frequencies <= fmax)
+            if not np.any(mask):
+                continue
+            mean_coh_val = float(np.mean(coherency[mask]))
+            out['band_coherence'][band_name] = mean_coh_val
 
-    # Band-specific coherence
-    for band_name, (fmin, fmax) in freq_bands.items():
-        mask = (frequencies >= fmin) & (frequencies <= fmax)
-        if np.any(mask):
-            band_coh = coherency[mask]
-            result['band_coherence'][band_name] = float(np.mean(band_coh))
+            surrogate_cohs = np.array([
+                float(np.mean(spectrum[mask])) if len(spectrum) > 0 else 0.0
+                for spectrum in surrogate_spectra
+            ])
+            p_val = (np.sum(surrogate_cohs >= mean_coh_val) + 1) / (int(n_surrogates) + 1)
+            out['band_significance'][band_name] = float(p_val)
 
-            # Significance test: compare to surrogate (phase-randomized/shuffled) coherence
-            surrogate_cohs = []
-            rng = np.random.default_rng(42)
-            n_surr = 50
-            if len(lfp_area1) > 50000:
-                n_surr = 10
-            
-            mean_coh_val = np.mean(band_coh)
-            
-            # Fast surrogate: circularly shift lfp_area2 and recompute coherence
-            for _ in range(n_surr):
-                low_val = 1
-                high_val = len(lfp_area2) - 1
-                shift = rng.integers(low_val, high_val) if low_val < high_val else 0
-                lfp_y_shuffled = np.roll(lfp_area2, shift)
-                if device == 'cuda':
-                    try:
-                        _, psd_x_shuf, psd_y_shuf, csd_xy_shuf = _welch_csd_gpu(
-                            lfp_area1, lfp_y_shuffled, fs, min(len(lfp_area1), 4096)
-                        )
-                        denom_shuf = psd_x_shuf * psd_y_shuf
-                        coh_shuf = np.zeros_like(csd_xy_shuf, dtype=float)
-                        shuf_mask = denom_shuf > 0
-                        coh_shuf[shuf_mask] = np.abs(csd_xy_shuf[shuf_mask]) ** 2 / denom_shuf[shuf_mask]
-                    except Exception:
-                        _, coh_shuf = signal.coherence(lfp_area1, lfp_y_shuffled, fs=fs, nperseg=min(len(lfp_area1), 4096), noverlap=None)
-                else:
-                    _, coh_shuf = signal.coherence(lfp_area1, lfp_y_shuffled, fs=fs, nperseg=min(len(lfp_area1), 4096), noverlap=None)
-                
-                band_coh_shuf = coh_shuf[mask] if len(coh_shuf) > 0 else np.array([0.0])
-                surrogate_cohs.append(np.mean(band_coh_shuf))
-                
-            p_val = (np.sum(np.array(surrogate_cohs) >= mean_coh_val) + 1) / (n_surr + 1)
-            result['band_significance'][band_name] = float(p_val)
+        return out
 
+    # Resolve the device ONCE. The GPU path used to be attempted inside the surrogate
+    # loop with a per-iteration `except Exception` fallback to CPU, so an intermittent
+    # failure (OOM under memory pressure being the obvious case) silently produced a
+    # null that was a MIXTURE of two estimators, with nothing logged and nothing in the
+    # result. Here a GPU failure discards the partial work and recomputes everything --
+    # observed value included -- on the CPU, so the returned values always share one
+    # estimator, named in `device_used`.
+    device_used = 'cuda' if device == 'cuda' else 'cpu'
+    if device_used == 'cuda':
+        try:
+            computed = _compute_all(_coherence_gpu)
+        except Exception as exc:
+            warnings.warn(
+                f"cross_area_coherence: GPU coherence failed ({exc}); recomputing the "
+                f"observed value and the entire surrogate null on CPU. Results are "
+                f"self-consistent but not comparable to a GPU run.",
+                RuntimeWarning,
+                stacklevel=2,
+            )
+            log.warning("GPU coherence failed: %s. Falling back to CPU wholesale.", exc)
+            device_used = 'cpu'
+            computed = _compute_all(_coherence_cpu)
+    else:
+        computed = _compute_all(_coherence_cpu)
+
+    result.update(computed)
+    result['device_used'] = device_used
     return result
 
 

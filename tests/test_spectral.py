@@ -487,3 +487,132 @@ class TestVoltageCurvatureAndCSD:
             voltage_curvature_1d(lfp, pitch_um=50.0)
 
 
+
+
+class TestCrossAreaCoherenceSurrogateContract:
+    """JNWB-003/004/005/006: the surrogate null must be seedable, single-estimator,
+    of a caller-chosen size, and honestly described."""
+
+    @staticmethod
+    def _signals(n=2048, seed=7):
+        rng = np.random.default_rng(seed)
+        base = rng.normal(size=n)
+        return base + 0.3 * rng.normal(size=n), base + 0.3 * rng.normal(size=n)
+
+    def test_rng_is_accepted_and_changes_the_null(self):
+        """JNWB-003: the null used to be unseedable, so every caller got one null."""
+        x, y = self._signals()
+        a = cross_area_coherence(x, y, fs=1000.0, rng=np.random.default_rng(1))
+        b = cross_area_coherence(x, y, fs=1000.0, rng=np.random.default_rng(2))
+        assert a['band_coherence'] == b['band_coherence'], "observed value must not depend on the RNG"
+        assert a['band_significance'] != b['band_significance'], (
+            "two independent nulls produced identical p-values across every band"
+        )
+
+    def test_default_rng_is_reproducible_and_reports_its_seed(self):
+        x, y = self._signals()
+        a = cross_area_coherence(x, y, fs=1000.0)
+        b = cross_area_coherence(x, y, fs=1000.0)
+        assert a['band_significance'] == b['band_significance']
+        assert a['surrogate_seed_entropy'] == 42, "the default seed must be recordable in a receipt"
+
+    def test_caller_supplied_rng_reports_no_seed(self):
+        """A receipt must not claim a seed jnwb did not choose."""
+        x, y = self._signals()
+        out = cross_area_coherence(x, y, fs=1000.0, rng=np.random.default_rng(99))
+        assert out['surrogate_seed_entropy'] is None
+
+    def test_n_surrogates_sets_the_p_value_floor(self):
+        """JNWB-005: the floor used to depend on input length, undisclosed."""
+        x, y = self._signals()
+        out = cross_area_coherence(x, y, fs=1000.0, n_surrogates=10)
+        assert out['n_surrogates_used'] == 10
+        assert out['p_value_floor'] == pytest.approx(1 / 11)
+        assert min(out['band_significance'].values()) >= out['p_value_floor'] - 1e-12
+
+    def test_default_floor_permits_rejection_at_alpha_05(self):
+        """The old long-signal branch gave a floor of 1/11 = 0.0909, above alpha."""
+        x, y = self._signals()
+        out = cross_area_coherence(x, y, fs=1000.0)
+        assert out['n_surrogates_used'] == 50
+        assert out['p_value_floor'] == pytest.approx(1 / 51)
+        assert out['p_value_floor'] < 0.05
+
+    def test_surrogate_count_no_longer_depends_on_signal_length(self):
+        """JNWB-005: len > 50000 used to silently drop 50 surrogates to 10."""
+        short_x, short_y = self._signals(n=2048)
+        long_x, long_y = self._signals(n=60000)
+        short = cross_area_coherence(short_x, short_y, fs=1000.0)
+        long = cross_area_coherence(long_x, long_y, fs=1000.0)
+        assert short['n_surrogates_used'] == long['n_surrogates_used'] == 50
+        assert short['p_value_floor'] == long['p_value_floor'], (
+            "the smallest attainable p-value must not be a function of input length"
+        )
+
+    def test_invalid_n_surrogates_rejected(self):
+        x, y = self._signals()
+        with pytest.raises(ValueError, match="n_surrogates"):
+            cross_area_coherence(x, y, fs=1000.0, n_surrogates=0)
+
+    def test_device_used_is_reported_and_cpu_request_is_honoured(self):
+        """JNWB-004: nothing in the result used to say which estimator produced it."""
+        x, y = self._signals()
+        out = cross_area_coherence(x, y, fs=1000.0, device='cpu')
+        assert out['device_used'] == 'cpu'
+
+    def test_cuda_request_without_cupy_falls_back_wholesale_and_warns(self, monkeypatch):
+        """A GPU failure must not yield a null that mixes two estimators."""
+        import jnwb.spectral as spectral_module
+
+        def always_fails(*args, **kwargs):
+            raise RuntimeError("simulated GPU out-of-memory")
+
+        monkeypatch.setattr(spectral_module, "_welch_csd_gpu", always_fails)
+        x, y = self._signals()
+        with pytest.warns(RuntimeWarning, match="recomputing"):
+            out = cross_area_coherence(x, y, fs=1000.0, device='cuda')
+        assert out['device_used'] == 'cpu', "the result must name the estimator that produced it"
+        cpu = cross_area_coherence(x, y, fs=1000.0, device='cpu')
+        assert out['band_coherence'] == cpu['band_coherence']
+        assert out['band_significance'] == cpu['band_significance'], (
+            "after a wholesale fallback the null must be identical to a pure CPU run"
+        )
+
+    def test_docstring_names_the_surrogate_it_actually_implements(self):
+        """JNWB-006: it called a circular shift 'phase-randomized'."""
+        doc = cross_area_coherence.__doc__
+        assert "circularly shift" in doc.lower() or "circular shift" in doc.lower()
+        assert "not phase randomization" in doc.lower()
+
+    def test_band_dependence_is_documented_not_hidden(self):
+        """Sharing surrogates across bands is correct, but must be stated."""
+        doc = " ".join(cross_area_coherence.__doc__.lower().split())
+        assert "dependent by construction" in doc
+        assert "same set of surrogate signals" in doc
+
+    def test_surrogate_spectra_are_computed_once_not_once_per_band(self, monkeypatch):
+        """The old loop recomputed every surrogate spectrum inside each band.
+
+        Identical shifts were drawn per band, so those recomputations produced
+        identical spectra -- n_surrogates x n_bands estimator calls to obtain
+        n_surrogates distinct results.
+        """
+        import jnwb.spectral as spectral_module
+
+        calls = {"n": 0}
+        real = spectral_module.signal.coherence
+
+        def counting(*args, **kwargs):
+            calls["n"] += 1
+            return real(*args, **kwargs)
+
+        monkeypatch.setattr(spectral_module.signal, "coherence", counting)
+        x, y = self._signals()
+        n_surr = 20
+        out = cross_area_coherence(x, y, fs=1000.0, n_surrogates=n_surr)
+        n_bands = len(out['band_coherence'])
+        assert n_bands >= 2, "need several bands for this to mean anything"
+        assert calls["n"] == n_surr + 1, (
+            f"expected 1 observed + {n_surr} surrogate estimator calls, got {calls['n']}; "
+            f"the per-band recomputation would be {1 + n_surr * n_bands}"
+        )
